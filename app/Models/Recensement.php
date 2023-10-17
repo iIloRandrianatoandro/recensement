@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Recensement extends Model
 {
     use HasFactory;
+    protected $fillable = ['annee','deficitParArticle','excedentParArticle','prixUnite','observation','existantApresEcriture'];
+    protected $guarded=[];
 }
