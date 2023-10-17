@@ -15,14 +15,15 @@ return new class extends Migration
     {
         Schema::create('recensements', function (Blueprint $table) {
             $table->id('idRecensement')->increments();
+            $table->string('designation')->nullable();
             $table->year('annee')->default(Carbon::now()->year);
-            $table->integer('deficitParArticle')->unsigned();
-            $table->integer('excedentParArticle')->unsigned();
-            $table->integer('existantApresEcriture')->unsigned();
-            $table->integer('prixUnite')->unsigned();
+            $table->integer('deficitParArticle')->unsigned()->nullable();
+            $table->integer('excedentParArticle')->unsigned()->nullable();
+            $table->integer('existantApresEcriture')->unsigned()->nullable();
+            $table->decimal('prixUnite',20,5);
             $table->string('observation')->nullable();
             $table->boolean('recense')->default(false);
-            $table->foreignIdFor(materiel::class);
+            $table->foreignIdFor(materiel::class)->default(1);
             $table->timestamps();
         });
     }
