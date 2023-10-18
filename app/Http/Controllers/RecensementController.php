@@ -90,6 +90,7 @@ class RecensementController extends Controller
                 }
            
             //raha misy doublon
+            else{
             $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
             foreach($listeDoublonTableau as $a){
                 $materiel_id=$a->{'idMateriel'};
@@ -104,6 +105,7 @@ class RecensementController extends Controller
                     $recensement->save();
                 }
             }
+        }
             
                 
             }
