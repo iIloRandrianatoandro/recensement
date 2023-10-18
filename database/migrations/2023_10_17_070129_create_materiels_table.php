@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('materiels', function (Blueprint $table) {
             $table->id('idMateriel')->increments();
-            $table->string('designation');
+            $table->Text('designation');
             $table->string('nomenclature');
             $table->string('especeUnite');
+            $table->integer('doublon')->nullable();
             $table->timestamps();
         });
     }

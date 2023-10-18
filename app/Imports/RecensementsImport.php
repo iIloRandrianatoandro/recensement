@@ -16,9 +16,10 @@ class RecensementsImport implements ToModel
     {
         return new Recensement([
             //'nomattribut'=>$row['champs excel],
-            'designation'=>$row[0],
-            'prixUnite'=>decimalval($row[2]),
-            'existantApresEcriture'=>intval($row[3]),
+           /* 'designation'=>$row[0],
+            'prixUnite'=>decimalval($row[1]),
+            'prixUnite'=>decimalval($row[3]),
+            'entree'=>intval($row[5]),*/
         ]);
     }
 }
