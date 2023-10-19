@@ -16,12 +16,14 @@ use DB;
 
 class RecensementController extends Controller
 {
-    public function import(Request $req) 
+    public function import(Request $req)
     {
         $excel = Excel::toArray(new RecensementsImport, $req->file);
+        $annee=$req->annee;
+        $premiereUtilisation=$req->premiereUtilisation;
         $array=array_slice($excel[0], 3);
         foreach($array as $array){
-            $premiereUtilisation=false;
+            //$premiereUtilisation=false;
             if($premiereUtilisation){ //si premiere utilisation
                // creer le materiel
                 $materiel=new materiel;
@@ -45,7 +47,7 @@ class RecensementController extends Controller
                 $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $nbMateriel+1]);
                 $idMateriel=$id[0]->{'idMateriel'};
                 $recensement->materiel_id=$idMateriel;
-                $recensement->annee=2024;
+                $recensement->annee=$annee;
                 $recensement->save();
             }
             // s'il y a une nouvelle entree de materiel, ajouter le materiel à la base de donnees 
@@ -70,7 +72,7 @@ class RecensementController extends Controller
                 $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $doublon]);
                 $idMateriel=$id[0]->{'idMateriel'};
                 $recensement->materiel_id=$idMateriel;
-                $recensement->annee=2024;
+                $recensement->annee=$annee;
                 $recensement->save();
             }
             else{ //ajout recensement sans nouvelle entree et non premiere utilisation
@@ -78,7 +80,7 @@ class RecensementController extends Controller
                 $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
                 foreach($listeDoublonTableau as $a){
                     $materiel_id=$a->{'idMateriel'};
-                    $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_id = :materiel_id and annee= :annee", ['materiel_id' => $materiel_id,'annee'=>2024]);
+                    $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_id = :materiel_id and annee= :annee", ['materiel_id' => $materiel_id,'annee'=>$annee]);
                     $nbRecensement= $nbRecensementTableau[0]->{"count(idRecensement)"};
                     if($nbRecensement==0){//recensement non existant sur le materiel
                         //creer le recensement
@@ -86,7 +88,7 @@ class RecensementController extends Controller
                         $recensement->prixUnite=doubleval($array[1]);
                         $recensement->existantApresEcriture=intval($array[5]);
                         $recensement->materiel_id=$materiel_id;
-                        $recensement->annee=2024;
+                        $recensement->annee=$annee;
                         $recensement->save();
                         break;
                     }
