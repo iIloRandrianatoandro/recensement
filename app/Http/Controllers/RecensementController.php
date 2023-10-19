@@ -31,7 +31,7 @@ class RecensementController extends Controller
                 $materiel->designation=$array[0];
                 $materiel->nomenclature='3';
                 $materiel->especeUnite=$array[7]; 
-                $materiel->doublon=1;
+                $materiel->doublon=$nbMateriel+1;
                 $materiel->save();
                 //return $materiel;
             
@@ -41,7 +41,27 @@ class RecensementController extends Controller
                 $recensement->existantApresEcriture=intval($array[5]);
                 // chercher l'id du materiel
                 $designation=$array[0];
-                $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => 1]);
+                $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $nbMateriel+1]);
+                $idMateriel=$id[0]->{'idMateriel'};
+                $recensement->materiel_id=$idMateriel;
+                $recensement->save();
+            }
+            elseif($nbMateriel!=0){
+                $materiel=new materiel;
+                $materiel->designation=$array[0];
+                $materiel->nomenclature='3';
+                $materiel->especeUnite=$array[7]; 
+                $materiel->doublon=$nbMateriel+1;
+                $materiel->save();
+                //return $materiel;
+            
+                //creer le recensement
+                $recensement=new recensement;
+                $recensement->prixUnite=doubleval($array[1]);
+                $recensement->existantApresEcriture=intval($array[5]);
+                // chercher l'id du materiel
+                $designation=$array[0];
+                $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $nbMateriel+1]);
                 $idMateriel=$id[0]->{'idMateriel'};
                 $recensement->materiel_id=$idMateriel;
                 $recensement->save();
@@ -71,7 +91,7 @@ class RecensementController extends Controller
                 $recensement->save();
                 return $recensement;
             }
-            else{//materiel efa misy, tsisy entree
+            else{//materiel efa misy, tsisy entree //ajout doublon
                 $designation=$array[0];
 
                 $nbDoublonTableau = DB::select("SELECT COUNT(idMateriel) FROM materiels WHERE designation = :designation", ['designation' => $designation]);
@@ -91,6 +111,7 @@ class RecensementController extends Controller
            
             //raha misy doublon
             else{
+                return $nbDoublon;
             $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
             foreach($listeDoublonTableau as $a){
                 $materiel_id=$a->{'idMateriel'};
