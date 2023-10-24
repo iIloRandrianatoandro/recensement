@@ -16,9 +16,9 @@ return new class extends Migration
         Schema::create('recensements', function (Blueprint $table) {
             $table->id('idRecensement');
             $table->year('annee')->default(Carbon::now()->year);
-            $table->integer('deficitParArticle')->unsigned()->nullable();
-            $table->integer('excedentParArticle')->unsigned()->nullable();
-            $table->integer('existantApresEcriture')->unsigned()->nullable();
+            $table->integer('deficitParArticle')->unsigned()->default(0);
+            $table->integer('excedentParArticle')->unsigned()->default(0);
+            $table->integer('existantApresEcriture')->unsigned()->default(0);
             $table->decimal('prixUnite',20,5);
             $table->string('observation')->nullable();
             $table->boolean('recense')->default(false);

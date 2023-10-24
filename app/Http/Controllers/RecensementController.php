@@ -47,7 +47,7 @@ class RecensementController extends Controller
                 $doublon=$nbDoublon+1;
                 $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $doublon]);
                 $idMateriel=$id[0]->{'idMateriel'};
-                $recensement->materiel_id=$idMateriel;
+                $recensement->materiel_idMateriel=$idMateriel;
                 $recensement->annee=$annee;
                 $recensement->save();
             }
@@ -55,15 +55,15 @@ class RecensementController extends Controller
                 $designation=$array[0];
                 $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
                 foreach($listeDoublonTableau as $materiel){
-                    $materiel_id=$materiel->{'idMateriel'};
-                    $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_id = :materiel_id and annee= :annee", ['materiel_id' => $materiel_id,'annee'=>$annee]);
+                    $materiel_idMateriel=$materiel->{'idMateriel'};
+                    $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_idMateriel = :materiel_idMateriel and annee= :annee", ['materiel_idMateriel' => $materiel_idMateriel,'annee'=>$annee]);
                     $nbRecensement= $nbRecensementTableau[0]->{"count(idRecensement)"};
                     if($nbRecensement==0){//recensement non existant sur le materiel
                         //creer le recensement
                         $recensement=new recensement;
                         $recensement->prixUnite=doubleval($array[1]);
                         $recensement->existantApresEcriture=intval($array[5]);
-                        $recensement->materiel_id=$materiel_id;
+                        $recensement->materiel_idMateriel=$materiel_idMateriel;
                         $recensement->annee=$annee;
                         $recensement->save();
                         break;
@@ -73,16 +73,16 @@ class RecensementController extends Controller
         }
     }
     public function listeMaterielARecense($annee){   
-        $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_id,materiels.designation from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
+        $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         return $listeMaterielARecense;
     }
     public function rechercherRecensement($designation){
-        $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_id=materiels.idMateriel and materiels.designation like '%$designation%' and recense=false; ");
+        $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and recense=false; ");
         return $listeMaterielCorrespondant;
     }
     public function voirRecensement($id)
     { 
-        $recensement=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_id,materiels.designation from recensements,materiels where recensements.materiel_id=materiels.idMateriel and idRecensement='$id'");
+        $recensement=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and idRecensement='$id'");
         return $recensement;
     }
 
@@ -98,17 +98,49 @@ class RecensementController extends Controller
     } 
     public function suivreFluxRecensement($annee){
         //liste Materiels a recenser durant l'année
-        $listeMateriel=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee'");
+        $listeMateriel=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
         //nombre de materiels a recenser durant l'annee
-        $nbMateriels=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee'");
+        $nbMateriels=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
         //nombre de materiels recensés
-        $nbMaterielsRecenses=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=true");
+        $nbMaterielsRecenses=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //nombre de materiels qui restent a recenser
-        $nbMaterielsARecenser=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
+        $nbMaterielsARecenser=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         //liste de materiels deja recensé
-        $listeMaterielRecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=true");
+        $listeMaterielRecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //liste de materiels qui reste a recenser
-        $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
+        $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         return ['listeMateriel'=>$listeMateriel,'nbMateriels'=>$nbMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
+    }
+    public function modifierRecensement(Request $req , $idRecensement)
+    { 
+        $recensement=recensement::find($idRecensement);
+        $recensement->deficitParArticle =$req->deficitParArticle ;
+        $recensement->excedentParArticle =$req->excedentParArticle ;
+        $recensement->prixUnite =$req->prixUnite ;
+        $recensement->obseration =$req->obseration ;
+        $recensement->save();
+        return $recensement;
+    } 
+    public function genererRecapitulatif($annee){
+        //valeur totale excedents
+        $valeurTotaleExcedent=Db::select("select sum(excedentParArticle * prixUnite) from recensements");
+        //valeur totale deficits
+        $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) from recensements");
+        //valeur totale existants
+        $valeurTotaleExistant=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements");
+        //nombre d'articles par nomenclature
+        $nbMaterielsParNomenclature=DB::select("select materiels.nomenclature,count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel group by materiels.nomenclature");
+        //nombre d'articles total //nbArticle=existantApresEcriture+excedent-deficit
+        $nbArticle=DB::select("select count(idRecensement)from recensements");
+        //liste recensement
+        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
+    }
+    public function consulterEvolution5Ans($annee){
+        $annee1Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements");
+        $annee1Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee'-5");
+    }
+    public function consulterEvolutionMateriel($materielID){
+        $annee1Valeur=Db::select("select sum((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.idMateriel='$materielID");
+        $annee1Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee'-5");
     }
 }
