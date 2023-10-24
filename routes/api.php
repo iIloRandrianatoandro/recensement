@@ -22,4 +22,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 Route::controller(RecensementController::class)->group(function(){
     Route::post('import','import'); 
+    Route::get('listeMaterielARecense/{annee}','listeMaterielARecense'); 
+    Route::get('rechercherRecensement/{designation}','rechercherRecensement'); 
+    Route::get('voirRecensement/{id}','voirRecensement'); 
+    Route::post('recenserMateriel/{idRecensement}','recenserMateriel'); 
 });

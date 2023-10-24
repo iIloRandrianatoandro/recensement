@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('recensements', function (Blueprint $table) {
-            $table->id('idRecensement')->increments();
+            $table->id('idRecensement');
             $table->year('annee')->default(Carbon::now()->year);
             $table->integer('deficitParArticle')->unsigned()->nullable();
             $table->integer('excedentParArticle')->unsigned()->nullable();
