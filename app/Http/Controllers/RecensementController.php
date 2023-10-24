@@ -73,21 +73,6 @@ class RecensementController extends Controller
         }
     }
     public function listeMaterielARecense($annee){   
-        //$annee=$req->annee;
-        //$listeMaterielARecense=DB::select("select existantApresEcriture,materiel_id from recensements where annee='$annee' and recense=false");
-        /*$listeRecensement=DB::select("select idRecensement,existantApresEcriture,materiel_id from recensements where annee=2023 and recense=false");
-        //$designation=DB::select("select designation from materiels where idMateriel='$id'");
-        //return $listeMaterielARecense[0]->materiel_id;
-        $listeMaterielARecense=[];
-        foreach ($listeRecensement as $recensement){
-            $idRecensement=$recensement->idRecensement;
-            $existantApresEcriture=$recensement->existantApresEcriture;
-            $idMateriel=$recensement->materiel_id;
-            $designationTab=DB::select("select designation from materiels where idMateriel='$idMateriel'");
-            $designation=$designationTab[0]->designation;
-            $listeMaterielARecense[] = (array) [$idRecensement,$designation,$existantApresEcriture];
-        }
-        return $listeMaterielARecense;*/
         $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_id,materiels.designation from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
         return $listeMaterielARecense;
     }
@@ -105,8 +90,6 @@ class RecensementController extends Controller
     public function recenserMateriel(Request $req , $idRecensement)
     { 
         $recensement=recensement::find($idRecensement);
-        //$recensementTab=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_id,materiels.designation from recensements,materiels where recensements.materiel_id=materiels.idMateriel and idRecensement='$id'");
-        //$recensement=$recensementTab[0];
         $recensement->deficitParArticle =$req->deficitParArticle ;
         $recensement->excedentParArticle =$req->excedentParArticle ;
         $recensement->observation =$req->observation ;
@@ -114,4 +97,19 @@ class RecensementController extends Controller
         $recensement->save();
         return $recensement;
     } 
+    public function suivreFluxRecensement($annee){
+        //liste Materiels a recenser durant l'année
+        $listeMateriel=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee'");
+        //nombre de materiels a recenser durant l'annee
+        $nbMateriels=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee'");
+        //nombre de materiels recensés
+        $nbMaterielsRecenses=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=true");
+        //nombre de materiels qui restent a recenser
+        $nbMaterielsARecenser=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
+        //liste de materiels deja recensé
+        $listeMaterielRecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=true");
+        //liste de materiels qui reste a recenser
+        $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_id=materiels.idMateriel and annee='$annee' and recense=false");
+        return ['listeMateriel'=>$listeMateriel,'nbMateriels'=>$nbMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
+    }
 }

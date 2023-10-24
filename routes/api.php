@@ -26,4 +26,5 @@ Route::controller(RecensementController::class)->group(function(){
     Route::get('rechercherRecensement/{designation}','rechercherRecensement'); 
     Route::get('voirRecensement/{id}','voirRecensement'); 
     Route::post('recenserMateriel/{idRecensement}','recenserMateriel'); 
+    Route::get('suivreFluxRecensement/{annee}','suivreFluxRecensement'); 
 });
