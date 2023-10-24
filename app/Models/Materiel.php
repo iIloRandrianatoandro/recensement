@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Materiel extends Model
 {
     use HasFactory;
+    protected $primaryKey = 'idMateriel';
     protected $fillable = ['designation','nomenclature','especeUnite'];
     public function recensements(){
         return $this->hasMany(recensements::class);

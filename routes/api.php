@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\RecensementController;
+use App\Http\Controllers\MaterielController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,4 +28,10 @@ Route::controller(RecensementController::class)->group(function(){
     Route::get('voirRecensement/{id}','voirRecensement'); 
     Route::post('recenserMateriel/{idRecensement}','recenserMateriel'); 
     Route::get('suivreFluxRecensement/{annee}','suivreFluxRecensement'); 
+});
+Route::controller(MaterielController::class)->group(function(){
+    Route::get('listeMateriel','listeMateriel'); 
+    Route::get('rechercherMateriel/{designation}','rechercherMateriel'); 
+    Route::get('voirMateriel/{id}','voirMateriel'); 
+    Route::post('modifierMateriel/{idMateriel}','modifierMateriel'); 
 });

@@ -77,7 +77,6 @@ class RecensementController extends Controller
         return $listeMaterielARecense;
     }
     public function rechercherRecensement($designation){
-        //return $designation;
         $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_id=materiels.idMateriel and materiels.designation like '%$designation%' and recense=false; ");
         return $listeMaterielCorrespondant;
     }
