@@ -30,8 +30,8 @@ Route::controller(RecensementController::class)->group(function(){
     Route::get('suivreFluxRecensement/{annee}','suivreFluxRecensement'); 
     Route::post('modifierRecensement/{idRecensement}','modifierRecensement'); 
     Route::get('genererRecapitulatif/{annee}','genererRecapitulatif'); 
-    Route::get('consulterEvolution5Ans/{annee}','consulterEvolution5Ans'); 
-    Route::get('consulterEvolutionMateriel/{materiel}','consulterEvolutionMateriel'); 
+    Route::get('consulterEvolution5Ans','consulterEvolution5Ans'); 
+    Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel'); 
 });
 Route::controller(MaterielController::class)->group(function(){
     Route::get('listeMateriel','listeMateriel'); 
