@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Maatwebsite\Excel\Facades\Excel;
-
+//use Maatwebsite\Excel\Excel;
 
 use App\Imports\RecensementsImport;
+use App\Exports\RecensementsExport;
 use App\Http\Controllers\Controller;
 use App\Models\recensement;
 use App\Models\materiel;
 use DB;
 use Carbon\Carbon;
-
 
 class RecensementController extends Controller
 {
@@ -135,7 +135,9 @@ class RecensementController extends Controller
         $nbArticle=DB::select("select count(idRecensement)from recensements");
         //liste recensement
         $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
-        return ['valeurTotaleExcedent'=>$valeurTotaleExcedent,'valeurTotaleDeficit'=>$valeurTotaleDeficit,'valeurTotaleExistant'=>$valeurTotaleExistant,'nbMaterielsParNomenclature'=>$nbMaterielsParNomenclature,'nbArticle'=>$nbArticle,'listeRecensementsTab'=>$listeRecensementsTab];
+
+        $a=['valeurTotaleExcedent'=>$valeurTotaleExcedent[0]->{'sum(excedentParArticle * prixUnite)'},'valeurTotaleDeficit'=>$valeurTotaleDeficit[0]->{'sum(deficitParArticle * prixUnite)'},'valeurTotaleExistant'=>$valeurTotaleExistant[0]->{'sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite)'},'nbMaterielsParNomenclature'=>$nbMaterielsParNomenclature,'nbArticle'=>$nbArticle[0]->{'count(idRecensement)'},'listeRecensementsTab'=>$listeRecensementsTab];
+        return $a;
     }
     public function consulterEvolution5Ans(){
         $annee5=Carbon::now()->year;
@@ -173,4 +175,85 @@ class RecensementController extends Controller
         $annee5Quantite=DB::select("select (recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle)from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.idMateriel='$materielID' and annee='$annee5'");
         return ['annee1Valeur'=>$annee1Valeur,'annee1Quantite'=>$annee1Quantite,'annee2Valeur'=>$annee2Valeur,'annee2Quantite'=>$annee2Quantite,'annee2Quantite'=>$annee2Quantite,'annee3Valeur'=>$annee3Valeur,'annee3Quantite'=>$annee3Quantite,'annee4Valeur'=>$annee4Valeur,'annee4Quantite'=>$annee4Quantite,'annee5Valeur'=>$annee5Valeur,'annee5Quantite'=>$annee5Quantite];
     }
+    /*public function export()
+    {
+        return Excel::download(new RecensementsExport, 'j.xlsx');
+    }*/
+    public function export()
+{
+    // Effectuez vos requêtes pour obtenir les données
+   // $dataFromQuery1 = DB::table('recensements')->get();
+   // return $dataFromQuery1;
+    $valeurTotaleExcedent = DB::table('recensements')->select(DB::raw('sum(excedentParArticle * prixUnite) as total'))->first(); //tokony anaty tableau aloha
+    $valeurTotaleDeficit = DB::table('recensements')->select(DB::raw('sum(deficitParArticle * prixUnite) as total'))->first();
+    $valeurTotaleExistant = DB::table('recensements')->select(DB::raw('sum((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as total'))->first();
+    $nbMaterielsParNomenclature = DB::table('recensements')->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')->select('materiels.nomenclature', DB::raw('count(recensements.idRecensement) as total'))->groupBy('materiels.nomenclature')->get();
+    $nbArticle = DB::table('recensements')->count();
+    $listeRecensementsTab = DB::table('recensements')
+    ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+    ->select(
+        'materiels.designation',
+        'materiels.especeUnite',
+        'recensements.prixUnite',
+        'recensements.existantApresEcriture',
+        DB::raw('(recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) as constateesParRecensement'),
+        'recensements.excedentParArticle',
+        'recensements.deficitParArticle',
+        DB::raw('(recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent'),
+        DB::raw('(recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit'),
+        DB::raw('((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant'),
+        'recensements.observation'
+    )
+    ->get();
+    //return $nbMaterielsParNomenclature;
+
+    // Fusionnez les données en un tableau unique
+    //$combinedData = array_merge($valeurTotaleExcedent->toArray(), $valeurTotaleDeficit->toArray());
+    $combinedData = [
+        'totalExcedent' => $valeurTotaleExcedent->total,
+        'totalDeficit' => $valeurTotaleDeficit->total,
+        'valeurTotaleExistant'=>$valeurTotaleExistant,
+        'nbArticle'=>$nbArticle,
+        'nbMaterielsParNomenclature'=>$nbMaterielsParNomenclature,
+        'listeRecensementsTab'=>$listeRecensementsTab,
+
+        // Ajoutez d'autres données ici
+    ];
+    // Utilisez Laravel Excel pour générer un fichier Excel
+    return Excel::download(new RecensementsExport($combinedData), 'jal.xlsx');
+    
 }
+/*public function export(){
+    //$dataFromQuery1 = DB::table('recensements')->get();
+    //return $dataFromQuery1;
+    //$dataFromQuery1 =  DB::table('recensements')->select(DB::raw('sum(excedentParArticle * prixUnite) '))->first();
+    //return $dataFromQuery1;
+    $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) as b from recensements");
+      /* $valeurTotaleExcedent=Db::select("select sum(excedentParArticle * prixUnite) from recensements");
+        //valeur totale deficits
+        $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) from recensements");
+        //valeur totale existants
+        $valeurTotaleExistant=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements");
+        //nombre d'articles par nomenclature
+        $nbMaterielsParNomenclature=DB::select("select materiels.nomenclature,count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel group by materiels.nomenclature");
+        //nombre d'articles total //nbArticle=existantApresEcriture+excedent-deficit
+        $nbArticle=DB::select("select count(idRecensement)from recensements");
+        //liste recensement
+        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
+*/
+    // Fusionnez les données en un tableau unique
+    //$combinedData = array_merge($dataFromQuery1->toArray(), $valeurTotaleDeficit->toArray());
+
+  //  return Excel::download(new RecensementsExport($dataFromQuery1,$valeurTotaleDeficit), 'jal.xlsx');
+//}
+}
+
+
+
+
+
+
+
+
+
+

@@ -31,7 +31,8 @@ Route::controller(RecensementController::class)->group(function(){
     Route::post('modifierRecensement/{idRecensement}','modifierRecensement'); 
     Route::get('genererRecapitulatif/{annee}','genererRecapitulatif'); 
     Route::get('consulterEvolution5Ans','consulterEvolution5Ans'); 
-    Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel'); 
+    Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel');
+    Route::get('export','export');  
 });
 Route::controller(MaterielController::class)->group(function(){
     Route::get('listeMateriel','listeMateriel'); 
