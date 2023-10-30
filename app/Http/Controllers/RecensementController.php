@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 use App\Imports\RecensementsImport;
 use App\Exports\RecensementsExport;
+use App\Exports\rec3Export;
 use App\Http\Controllers\Controller;
 use App\Models\recensement;
 use App\Models\materiel;
@@ -175,15 +176,8 @@ class RecensementController extends Controller
         $annee5Quantite=DB::select("select (recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle)from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.idMateriel='$materielID' and annee='$annee5'");
         return ['annee1Valeur'=>$annee1Valeur,'annee1Quantite'=>$annee1Quantite,'annee2Valeur'=>$annee2Valeur,'annee2Quantite'=>$annee2Quantite,'annee2Quantite'=>$annee2Quantite,'annee3Valeur'=>$annee3Valeur,'annee3Quantite'=>$annee3Quantite,'annee4Valeur'=>$annee4Valeur,'annee4Quantite'=>$annee4Quantite,'annee5Valeur'=>$annee5Valeur,'annee5Quantite'=>$annee5Quantite];
     }
-    /*public function export()
+  /*  public function export()
     {
-        return Excel::download(new RecensementsExport, 'j.xlsx');
-    }*/
-    public function export()
-{
-    // Effectuez vos requêtes pour obtenir les données
-   // $dataFromQuery1 = DB::table('recensements')->get();
-   // return $dataFromQuery1;
     $valeurTotaleExcedent = DB::table('recensements')->select(DB::raw('sum(excedentParArticle * prixUnite) as total'))->first(); //tokony anaty tableau aloha
     $valeurTotaleDeficit = DB::table('recensements')->select(DB::raw('sum(deficitParArticle * prixUnite) as total'))->first();
     $valeurTotaleExistant = DB::table('recensements')->select(DB::raw('sum((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as total'))->first();
@@ -192,23 +186,20 @@ class RecensementController extends Controller
     $listeRecensementsTab = DB::table('recensements')
     ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
     ->select(
-        'materiels.designation',
-        'materiels.especeUnite',
-        'recensements.prixUnite',
-        'recensements.existantApresEcriture',
+        'materiels.designation as designation' ,
+        'materiels.especeUnite as especeUnite',
+        'recensements.prixUnite as prixUnite',
+        'recensements.existantApresEcriture as existantApresEcriture',
         DB::raw('(recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) as constateesParRecensement'),
-        'recensements.excedentParArticle',
-        'recensements.deficitParArticle',
+        'recensements.excedentParArticle as excedentParArticle',
+        'recensements.deficitParArticle as deficitParArticle',
         DB::raw('(recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent'),
         DB::raw('(recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit'),
         DB::raw('((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant'),
-        'recensements.observation'
+        'recensements.observation as observation'
     )
     ->get();
-    //return $nbMaterielsParNomenclature;
-
-    // Fusionnez les données en un tableau unique
-    //$combinedData = array_merge($valeurTotaleExcedent->toArray(), $valeurTotaleDeficit->toArray());
+    
     $combinedData = [
         'totalExcedent' => $valeurTotaleExcedent->total,
         'totalDeficit' => $valeurTotaleDeficit->total,
@@ -222,30 +213,117 @@ class RecensementController extends Controller
     // Utilisez Laravel Excel pour générer un fichier Excel
     return Excel::download(new RecensementsExport($combinedData), 'jal.xlsx');
     
-}
-/*public function export(){
-    //$dataFromQuery1 = DB::table('recensements')->get();
-    //return $dataFromQuery1;
-    //$dataFromQuery1 =  DB::table('recensements')->select(DB::raw('sum(excedentParArticle * prixUnite) '))->first();
-    //return $dataFromQuery1;
-    $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) as b from recensements");
-      /* $valeurTotaleExcedent=Db::select("select sum(excedentParArticle * prixUnite) from recensements");
-        //valeur totale deficits
-        $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) from recensements");
-        //valeur totale existants
-        $valeurTotaleExistant=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements");
-        //nombre d'articles par nomenclature
-        $nbMaterielsParNomenclature=DB::select("select materiels.nomenclature,count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel group by materiels.nomenclature");
-        //nombre d'articles total //nbArticle=existantApresEcriture+excedent-deficit
-        $nbArticle=DB::select("select count(idRecensement)from recensements");
-        //liste recensement
-        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
-*/
-    // Fusionnez les données en un tableau unique
-    //$combinedData = array_merge($dataFromQuery1->toArray(), $valeurTotaleDeficit->toArray());
+}*/
+public function export()
+{
+    $listeRecensementsTab = DB::table('recensements')
+    ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+    ->select(
+        'materiels.designation as designation' ,
+        'materiels.especeUnite as especeUnite',
+        'recensements.prixUnite as prixUnite',
+        'recensements.existantApresEcriture as existantApresEcriture',
+        DB::raw('(recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) as constateesParRecensement'),
+        'recensements.excedentParArticle as excedentParArticle',
+        'recensements.deficitParArticle as deficitParArticle',
+        DB::raw('(recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent'),
+        DB::raw('(recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit'),
+        DB::raw('((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant'),
+        'recensements.observation as observation'
+    )
+    ->get();
+    // Ajoutez les titres
+    $titles = [
+        "Désignation des matières denrées et objets",
+        "Espèce des unités",
+        "Prix de l'unité",
+        "Quantités",
+        "Excédent par article",
+        "Déficit par article",
+        "Valeurs",
+        "Observation"
+    ];
+    $titles2 = [
+        "Existants d'après les écritures",
+        "Constatées par recensement",
+        "des excédents",
+        "des déficits"
+    ];
+    // Créez un objet Excel
+    $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
-  //  return Excel::download(new RecensementsExport($dataFromQuery1,$valeurTotaleDeficit), 'jal.xlsx');
-//}
+    // Créez une feuille de calcul (Feuille 1)
+    $feuille1 = $excel->getActiveSheet();  // Obtenez la feuille active
+    $feuille1->setTitle('rec3'); // Définissez le titre de la feuille
+
+    // Insérez les titres dans la première ligne
+    $row = 1; // Ligne de départ
+    $col = 'A'; // Colonne de départ
+    /*foreach ($titles as $title) {
+        $feuille1->setCellValue($col . $row, $title);
+        $col++;
+    }*/
+    $feuille1->setCellValue("A". 1,"Désignation des matières, denrées et objets");
+    $feuille1->setCellValue("B". 1,"Espèce des unités");
+    $feuille1->setCellValue("C". 1,"Prix de l'unité");
+    $feuille1->setCellValue("D". 1,"Quantités");
+    $feuille1->setCellValue("F". 1,"Excédent par article");
+    $feuille1->setCellValue("G". 1,"Déficit par article");
+    $feuille1->setCellValue("H". 1,"Valeurs");
+    $feuille1->setCellValue("M". 1,"Observation");
+
+    $feuille1->setCellValue("D". 2,"Existants d'après les écritures");
+    $feuille1->setCellValue("E". 2,"Constatées par recensement");
+    $feuille1->setCellValue("H". 2,"des excédents");
+    $feuille1->setCellValue("J". 2,"des excédents");
+    $feuille1->setCellValue("L". 2,"des existants");
+    
+    $feuille1->setCellValue("H". 3,"par article");
+    $feuille1->setCellValue("I". 3,"par numéro de la nomenclature sommaire");
+    $feuille1->setCellValue("J". 3,"par article");
+    $feuille1->setCellValue("K". 3,"par numéro de la nomenclature sommaire");
+
+    $feuille1->mergeCells('A1:A3');
+    $feuille1->mergeCells('B1:B3');
+    $feuille1->mergeCells('C1:C3');
+    $feuille1->mergeCells('D2:D3');
+    $feuille1->mergeCells('E2:E3');
+    $feuille1->mergeCells('F1:F3');
+    $feuille1->mergeCells('G1:G3');
+    $feuille1->mergeCells('H1:L1');
+    $feuille1->mergeCells('H2:I2');
+    $feuille1->mergeCells('J2:K2');
+    $feuille1->mergeCells('L2:L3');
+    $feuille1->mergeCells('M1:M3');
+    $feuille1->mergeCells('D1:E1');
+    
+    /*$row = 2; // Ligne de départ
+    $col = 'A'; // Colonne de départ
+    foreach ($titles2 as $title) {
+        $feuille1->setCellValue($col . $row, $title);
+        $col++;
+    }*/
+    // Fusionnez les cellules pour le titre
+   // $feuille1->mergeCells('A1:A2'); // Fusionnez de A1 à K1
+
+    // Utilisez les données directement depuis la requête
+   /* $row = 3; // Commencez à la ligne suivante
+    foreach ($listeRecensementsTab as $data) {
+        $col = 'A'; // Colonne de départ
+        foreach ($data as $value) {
+            $feuille1->setCellValue($col . $row, $value);
+            $col++;
+        }
+        $row++;
+    }*/
+
+    // Générez le fichier Excel
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($excel);
+    $temp_file = tempnam(sys_get_temp_dir(), 'export');
+    $writer->save($temp_file);
+
+    return response()->download($temp_file, 'recensement1.xlsx')->deleteFileAfterSend(true);
+}
 }
 
 
