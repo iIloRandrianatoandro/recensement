@@ -216,8 +216,20 @@ class RecensementController extends Controller
 }*/
 public function export()
 {
-    $listeRecensementsTab = DB::table('recensements')
+    // Créez un objet Excel
+    $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    // Supprimez la première feuille de calcul inutile
+    $excel->removeSheetByIndex(0);
+    //liste des nomenclatures
+    $nomenclatures=Db::select('select nomenclature from materiels group by nomenclature');
+    $nomenclaturesTab=[];
+    foreach ($nomenclatures as $a){
+        $nomenclaturesTab[]=$a->nomenclature;
+    }
+    foreach($nomenclaturesTab as $nomenclature){
+        $listeRecensementsTab = DB::table('recensements')
     ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+    ->where('materiels.nomenclature', $nomenclature) 
     ->select(
         'materiels.designation as designation' ,
         'materiels.especeUnite as especeUnite',
@@ -232,12 +244,9 @@ public function export()
         'recensements.observation as observation'
     )
     ->get();
-    // Créez un objet Excel
-    $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-
     // Créez une feuille de calcul (Feuille 1)
-    $feuille1 = $excel->getActiveSheet();  // Obtenez la feuille active
-    $feuille1->setTitle('rec3'); // Définissez le titre de la feuille
+    $feuille1 = $excel->createSheet();  // Obtenez la feuille active
+    $feuille1->setTitle('rec'.$nomenclature); // Définissez le titre de la feuille
 
     //titres
     $feuille1->setCellValue("A". 1,"Désignation des matières, denrées et objets");
@@ -252,13 +261,14 @@ public function export()
     $feuille1->setCellValue("D". 2,"Existants d'après les écritures");
     $feuille1->setCellValue("E". 2,"Constatées par recensement");
     $feuille1->setCellValue("H". 2,"des excédents");
-    $feuille1->setCellValue("J". 2,"des excédents");
+    $feuille1->setCellValue("J". 2,"des déficits");
     $feuille1->setCellValue("L". 2,"des existants");
     
     $feuille1->setCellValue("H". 3,"par article");
     $feuille1->setCellValue("I". 3,"par numéro de la nomenclature sommaire");
     $feuille1->setCellValue("J". 3,"par article");
     $feuille1->setCellValue("K". 3,"par numéro de la nomenclature sommaire");
+    $feuille1->setCellValue("A". 4,"NOMENCLATURE ".$nomenclature);
 
     //fusion cellules
     $feuille1->mergeCells('A1:A3');
@@ -276,26 +286,23 @@ public function export()
     $feuille1->mergeCells('D1:E1');
     
     //contenu
-//return $listeRecensementsTab;
-// Insérer les données dans la feuille de calcul
-$rowIndex = 5;
-foreach ($listeRecensementsTab as $recensement) {
-    $columnIndex = 1;
-    foreach ($recensement as $value) {
-        //return $value;
-        if(($columnIndex==9)||($columnIndex==11)){
-            $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, "");
-            $feuille1->setCellValueByColumnAndRow($columnIndex+1, $rowIndex, $value);
+    // Insérer les données dans la feuille de calcul
+    $rowIndex = 5;
+    foreach ($listeRecensementsTab as $recensement) {
+        $columnIndex = 1;
+        foreach ($recensement as $value) {
+            if(($columnIndex==9)||($columnIndex==11)){
+                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, "");
+                $feuille1->setCellValueByColumnAndRow($columnIndex+1, $rowIndex, $value);
+                $columnIndex++;
+            }
+            else{
+                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);            
+            }
             $columnIndex++;
-            //return $value;
         }
-        else{
-            $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);            
-        }
-        $columnIndex++;
+        $rowIndex++;
     }
-    $rowIndex++;
-}
 
 
 
@@ -313,6 +320,11 @@ foreach ($listeRecensementsTab as $recensement) {
     ];
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
+    }
+    // Activez la première feuille de calcul
+    //$excel->setActiveSheetIndex(0);
+    
+   
 
     //derniere page
     $feuille2=$excel->createSheet();
@@ -326,12 +338,6 @@ foreach ($listeRecensementsTab as $recensement) {
     $feuille2->setCellValue("I". 1,"EXISTANTS");
     $feuille2->setCellValue("L". 1,"ARTICLES");
 
-    //liste des nomenclatures
-    $nomenclatures=Db::select('select nomenclature from materiels group by nomenclature');
-    $nomenclaturesTab=[];
-    foreach ($nomenclatures as $a){
-        $nomenclaturesTab[]=$a->nomenclature;
-    }
     //mettre les comenclatures dans le tableau
     $ligne="A"; $colonne=2;
     foreach ($nomenclaturesTab as $a){
