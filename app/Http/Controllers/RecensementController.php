@@ -232,23 +232,6 @@ public function export()
         'recensements.observation as observation'
     )
     ->get();
-    // Ajoutez les titres
-    $titles = [
-        "Désignation des matières denrées et objets",
-        "Espèce des unités",
-        "Prix de l'unité",
-        "Quantités",
-        "Excédent par article",
-        "Déficit par article",
-        "Valeurs",
-        "Observation"
-    ];
-    $titles2 = [
-        "Existants d'après les écritures",
-        "Constatées par recensement",
-        "des excédents",
-        "des déficits"
-    ];
     // Créez un objet Excel
     $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
 
@@ -256,13 +239,6 @@ public function export()
     $feuille1 = $excel->getActiveSheet();  // Obtenez la feuille active
     $feuille1->setTitle('rec3'); // Définissez le titre de la feuille
 
-    // Insérez les titres dans la première ligne
-    $row = 1; // Ligne de départ
-    $col = 'A'; // Colonne de départ
-    /*foreach ($titles as $title) {
-        $feuille1->setCellValue($col . $row, $title);
-        $col++;
-    }*/
     $feuille1->setCellValue("A". 1,"Désignation des matières, denrées et objets");
     $feuille1->setCellValue("B". 1,"Espèce des unités");
     $feuille1->setCellValue("C". 1,"Prix de l'unité");
@@ -316,6 +292,147 @@ public function export()
         }
         $row++;
     }*/
+      // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
+    $lastColumn = $feuille1->getHighestDataColumn();
+    $lastRow = $feuille1->getHighestDataRow();
+
+    // Appliquez des bordures aux cellules de A1 à la dernière cellule avec des données
+    $styleArray = [
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+            ],
+        ],
+    ];
+
+    $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
+
+    $feuille2=$excel->createSheet();
+    $feuille2->setTitle('recap');
+
+    $feuille2->setCellValue("A". 1,"NOMENCLATURE");
+    $feuille2->setCellValue("B". 1,"EXCEDENTS");
+    $feuille2->setCellValue("E". 1,"DEFICITS");
+    $feuille2->setCellValue("I". 1,"EXISTANTS");
+    $feuille2->setCellValue("L". 1,"ARTICLES");
+
+    $feuille2->setCellValue("A". 2,"03");
+    $feuille2->setCellValue("A". 3,"05");
+    $feuille2->setCellValue("A". 4,"10");
+    $feuille2->setCellValue("A". 5,"TOTAL");
+    
+    $feuille2->mergeCells('B1:D1');
+    $feuille2->mergeCells('E1:H1');
+    $feuille2->mergeCells('I1:K1');
+    $feuille2->mergeCells('L1:M1');
+    
+    $feuille2->mergeCells('B2:D2');
+    $feuille2->mergeCells('E2:H2');
+    $feuille2->mergeCells('I2:K2');
+    $feuille2->mergeCells('L2:M2');
+    
+    $feuille2->mergeCells('B3:D3');
+    $feuille2->mergeCells('E3:H3');
+    $feuille2->mergeCells('I3:K3');
+    $feuille2->mergeCells('L3:M3');
+    
+    $feuille2->mergeCells('B4:D4');
+    $feuille2->mergeCells('E4:H4');
+    $feuille2->mergeCells('I4:K4');
+    $feuille2->mergeCells('L4:M4');
+    
+    $feuille2->mergeCells('B5:D5');
+    $feuille2->mergeCells('E5:H5');
+    $feuille2->mergeCells('I5:K5');
+    $feuille2->mergeCells('L5:M5');
+    
+    $feuille2->getStyle('A1:M1')->applyFromArray($styleArray);
+    $feuille2->getStyle('A2:M2')->applyFromArray($styleArray);
+    $feuille2->getStyle('A3:M3')->applyFromArray($styleArray);
+    $feuille2->getStyle('A4:M4')->applyFromArray($styleArray);
+    $feuille2->getStyle('A5:M5')->applyFromArray($styleArray);
+
+    $feuille2->setCellValue("A". 7,"ARRETE le présent procès-verbal de recensement au nombre de : Sept cent soixante-treize (773) articles et à la somme de :");
+    $feuille2->setCellValue("A". 8,"QUATRE MILLIARDS NEUF CENT SOIXANTE-DOUZE MILLIONS DEUX CENT TRENTE-SEPT MILLE");
+    $feuille2->setCellValue("A". 9,"SEPT CENT TREIZE ARIARY SOIXANTE");
+    $feuille2->setCellValue("A". 9,"(4 792 237 713,60 Ar)");
+    $feuille2->mergeCells('A7:M7');
+    $feuille2->mergeCells('A8:M8');
+    $feuille2->mergeCells('A9:M9');
+    $feuille2->mergeCells('A10:M10');
+
+    // Insérez du texte dans une cellule (émulant une zone de texte)
+    $text1 = "ARRETE Le présent procès-verbal à  (1) Zéro article comportant des excédents représentant une valeur de (1) NEANT; et (1) Zéro articles comportant des déficits représentant ";
+    $feuille2->setCellValue('A12', $text1);
+    $text2 = "une valeur de (1) NEANT; et Spet cent soixante-treize (773) articles des existants représentant une valeur de (1) Quatre milliards neuf cent soixante-douze millions ";
+    $feuille2->setCellValue('A13', $text2);
+    $text3 = "deux cent trente-sept mille sept cent treize ariary soixante (Ar 4 792 237 713,60) ";
+    $feuille2->setCellValue('A14', $text3);
+    $text4 = "Le Comptable ............................................................ Antananarivo, le 31 décembre 2020";
+    $feuille2->setCellValue('A16', $text4);
+    $text5 = "Le (2) Dépositaire Comptable";
+    $feuille2->setCellValue('B17', $text5);
+    $text6 = "OBSERVATIONS ET PROPOSITIONS DU FONCTIONNAIRE RECENSEUR";
+    $feuille2->setCellValue('A22', $text6);
+    $text7 = "Commissions :";
+    $feuille2->setCellValue('C23', $text7);
+    $text8 = "Antananarivo, le le 31 décembre 2020";
+    $feuille2->setCellValue('C28', $text8);
+    $text9 = "OBSERVATIONS DU COMPTABLE";
+    $feuille2->setCellValue('B30', $text9);
+    $text10 = "Antananarivo, le  31 décembre 2020";
+    $feuille2->setCellValue('C34', $text10);
+    
+    $feuille2->setCellValue('A38', 'Avis du délégué du chef de service');
+    $feuille2->setCellValue('A39', "(s'il y a lieu)");
+    $feuille2->setCellValue('F38', 'Décision ou conclusion du chef de service');
+    $feuille2->setCellValue('A45', 'Antananarivo, le');
+    $feuille2->setCellValue('F45', 'Antananarivo, le');
+    $feuille2->setCellValue('C47', 'DECISION DU');
+    $feuille2->setCellValue('H49', 'Antananarivo, le');
+    //$feuille2->getStyle('A38:M45')->applyFromArray($styleArray);
+    $feuille2->mergeCells('A38:E38');
+    $feuille2->mergeCells('A39:E39');
+    $feuille2->mergeCells('F38:M39');
+    $feuille2->mergeCells('A45:E45');
+    $feuille2->mergeCells('F45:M45');
+
+    //$feuille2->getStyle('A38')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    // Appliquez des styles pour obtenir un aspect de zone de texte
+    $style = [
+        'font' => [
+            'name' => 'Calibri (Corps)',
+            'size' => 12,
+            'color' => ['rgb' => '000000'], // Couleur du texte (noir)
+        ],
+        'alignment' => [
+            'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+        ],
+        /*'borders' => [
+            'outline' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+            ],
+        ],*/
+    ];
+
+    $feuille2->getStyle('A12')->applyFromArray($style);
+    $feuille2->getStyle('A13')->applyFromArray($style);
+    $feuille2->getStyle('A14')->applyFromArray($style);
+    $feuille2->getStyle('A15')->applyFromArray($style);
+    $feuille2->getStyle('B15')->applyFromArray($style);
+    $feuille2->getStyle('A21')->applyFromArray($style);
+    $feuille2->getStyle('C22')->applyFromArray($style);
+    $feuille2->getStyle('C26')->applyFromArray($style);
+    $feuille2->getStyle('B28')->applyFromArray($style);
+    $feuille2->getStyle('C33')->applyFromArray($style);
+
+
+
+    // Ajustez la largeur de la colonne pour s'adapter au contenu
+    $feuille1->getColumnDimension('A')->setAutoSize(true);
+    
 
     // Générez le fichier Excel
     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($excel);
