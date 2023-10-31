@@ -15,6 +15,7 @@ use App\Models\recensement;
 use App\Models\materiel;
 use DB;
 use Carbon\Carbon;
+use NumberFormatter;
 
 class RecensementController extends Controller
 {
@@ -125,7 +126,7 @@ class RecensementController extends Controller
     } 
     public function genererRecapitulatif($annee){
         //valeur totale excedents
-        $valeurTotaleExcedent=Db::select("select sum(excedentParArticle * prixUnite) from recensements");
+        $valeurTotaleExcedent=Db::select("select sum(recensements.excedentParArticle * recensements.prixUnite) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and nomenclature='5'");
         //valeur totale deficits
         $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) from recensements");
         //valeur totale existants
@@ -176,46 +177,8 @@ class RecensementController extends Controller
         $annee5Quantite=DB::select("select (recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle)from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.idMateriel='$materielID' and annee='$annee5'");
         return ['annee1Valeur'=>$annee1Valeur,'annee1Quantite'=>$annee1Quantite,'annee2Valeur'=>$annee2Valeur,'annee2Quantite'=>$annee2Quantite,'annee2Quantite'=>$annee2Quantite,'annee3Valeur'=>$annee3Valeur,'annee3Quantite'=>$annee3Quantite,'annee4Valeur'=>$annee4Valeur,'annee4Quantite'=>$annee4Quantite,'annee5Valeur'=>$annee5Valeur,'annee5Quantite'=>$annee5Quantite];
     }
-  /*  public function export()
-    {
-    $valeurTotaleExcedent = DB::table('recensements')->select(DB::raw('sum(excedentParArticle * prixUnite) as total'))->first(); //tokony anaty tableau aloha
-    $valeurTotaleDeficit = DB::table('recensements')->select(DB::raw('sum(deficitParArticle * prixUnite) as total'))->first();
-    $valeurTotaleExistant = DB::table('recensements')->select(DB::raw('sum((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as total'))->first();
-    $nbMaterielsParNomenclature = DB::table('recensements')->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')->select('materiels.nomenclature', DB::raw('count(recensements.idRecensement) as total'))->groupBy('materiels.nomenclature')->get();
-    $nbArticle = DB::table('recensements')->count();
-    $listeRecensementsTab = DB::table('recensements')
-    ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
-    ->select(
-        'materiels.designation as designation' ,
-        'materiels.especeUnite as especeUnite',
-        'recensements.prixUnite as prixUnite',
-        'recensements.existantApresEcriture as existantApresEcriture',
-        DB::raw('(recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) as constateesParRecensement'),
-        'recensements.excedentParArticle as excedentParArticle',
-        'recensements.deficitParArticle as deficitParArticle',
-        DB::raw('(recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent'),
-        DB::raw('(recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit'),
-        DB::raw('((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant'),
-        'recensements.observation as observation'
-    )
-    ->get();
-    
-    $combinedData = [
-        'totalExcedent' => $valeurTotaleExcedent->total,
-        'totalDeficit' => $valeurTotaleDeficit->total,
-        'valeurTotaleExistant'=>$valeurTotaleExistant,
-        'nbArticle'=>$nbArticle,
-        'nbMaterielsParNomenclature'=>$nbMaterielsParNomenclature,
-        'listeRecensementsTab'=>$listeRecensementsTab,
-
-        // Ajoutez d'autres données ici
-    ];
-    // Utilisez Laravel Excel pour générer un fichier Excel
-    return Excel::download(new RecensementsExport($combinedData), 'jal.xlsx');
-    
-}*/
 public function export()
-{
+{    
     // Créez un objet Excel
     $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     // Supprimez la première feuille de calcul inutile
@@ -321,9 +284,6 @@ public function export()
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
     }
-    // Activez la première feuille de calcul
-    //$excel->setActiveSheetIndex(0);
-    
    
 
     //derniere page
@@ -338,14 +298,108 @@ public function export()
     $feuille2->setCellValue("I". 1,"EXISTANTS");
     $feuille2->setCellValue("L". 1,"ARTICLES");
 
-    //mettre les comenclatures dans le tableau
+    //mettre les nomenclatures dans le tableau
     $ligne="A"; $colonne=2;
     foreach ($nomenclaturesTab as $a){
         $feuille2->setCellValue($ligne. $colonne,$a);
         $colonne++;
     }
     $feuille2->setCellValue("A". $colonne,"TOTAL");
+    //mettre la vealeur des excedents
+    $ligne="B"; $colonne=2;
+    foreach ($nomenclaturesTab as $a){
+        $valeurTotaleExcedent = DB::table('recensements')
+        ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+        ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+        ->where('materiels.nomenclature', $a)
+        ->first();
+
+        // valeur totale des excédents
+        $totalExcedent = $valeurTotaleExcedent->totalExcedent;
+        
+        $feuille2->setCellValue($ligne. $colonne,$totalExcedent);
+        $colonne++;
+    }
+    $valeurTotaleExcedent = DB::table('recensements')
+        ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+        ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+        ->first();
+
+    // valeur totale des excédents
+    $totalExcedent = $valeurTotaleExcedent->totalExcedent;
+    $feuille2->setCellValue("B". $colonne,$totalExcedent);
+
+    //mettre la valeur des deficits
+     $ligne="E"; $colonne=2;
+     foreach ($nomenclaturesTab as $a){
+         $valeurTotaleDeficit = DB::table('recensements')
+         ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+         ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+         ->where('materiels.nomenclature', $a)
+         ->first();
+ 
+         // valeur totale des excédents
+         $totalDeficit = $valeurTotaleDeficit->totalDeficit;
+         
+         $feuille2->setCellValue($ligne. $colonne,$totalDeficit);
+         $colonne++;
+     }
+     $valeurTotaleDeficit = DB::table('recensements')
+         ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+         ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+         ->first();
+ 
+     // valeur totale des excédents
+     $totalDeficit = $valeurTotaleDeficit->totalDeficit;
+     $feuille2->setCellValue("E". $colonne,$totalDeficit);
+
+     //mettre la valeur des existants
+     $ligne="I"; $colonne=2;
+     foreach ($nomenclaturesTab as $a){
+        $valeurTotaleExistant = DB::table('recensements')
+        ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+       ->select(DB::raw('SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as totalExistant'))
+       ->where('materiels.nomenclature', $a)
+       ->first();
+   
+       //valeur totale des existants
+       $totalExistant = $valeurTotaleExistant->totalExistant;
+         
+         $feuille2->setCellValue($ligne. $colonne,$totalExistant);
+         $colonne++;
+     }
+     $valeurTotaleExistant = DB::table('recensements')
+    ->select(DB::raw('SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as totalExistant'))
+    ->first();
+
+    //valeur totale des existants
+    $totalExistant = $valeurTotaleExistant->totalExistant;
+    $feuille2->setCellValue("I". $colonne,$totalExistant);
     
+     //mettre le nombre d'articles
+     $ligne="L"; $colonne=2;
+     foreach ($nomenclaturesTab as $a){
+       $nbArticle = DB::table('recensements')
+       ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+        ->select(DB::raw('COUNT(recensements.idRecensement) as totalArticles'))
+        ->where('materiels.nomenclature', $a)
+        ->first();
+
+        //nombre total d'articles
+        $totalArticles = $nbArticle->totalArticles;
+         
+        $feuille2->setCellValue($ligne. $colonne,$totalArticles);
+        $colonne++;
+     }
+     $nbArticle = DB::table('recensements')
+        ->select(DB::raw('COUNT(idRecensement) as totalArticles'))
+        ->first();
+
+    //nombre total d'articles
+    $totalArticles = $nbArticle->totalArticles;
+    $feuille2->setCellValue("L". $colonne,$totalArticles);
+
+
     //fusion cellules
     //premiere ligne
     $feuille2->mergeCells('B1:D1');
@@ -362,45 +416,43 @@ public function export()
         $feuille2->mergeCells('I' . $a . ':' . 'K' . $a);
         $feuille2->mergeCells('L' . $a . ':' . 'M' . $a);
     }
-    //$nbMaterielsParNomenclature = DB::table('recensements')->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')->select('materiels.nomenclature', DB::raw('count(recensements.idRecensement) as total'))->groupBy('materiels.nomenclature')->get();
-    //return $nbMaterielsParNomenclature;
-    
-    /*$feuille2->mergeCells('B3:D3');
-    $feuille2->mergeCells('E3:H3');
-    $feuille2->mergeCells('I3:K3');
-    $feuille2->mergeCells('L3:M3');
-    
-    $feuille2->mergeCells('B4:D4');
-    $feuille2->mergeCells('E4:H4');
-    $feuille2->mergeCells('I4:K4');
-    $feuille2->mergeCells('L4:M4');
-    
-    $feuille2->mergeCells('B5:D5');
-    $feuille2->mergeCells('E5:H5');
-    $feuille2->mergeCells('I5:K5');
-    $feuille2->mergeCells('L5:M5');
-    
-    $feuille2->getStyle('A1:M1')->applyFromArray($styleArray);
-    $feuille2->getStyle('A2:M2')->applyFromArray($styleArray);
-    $feuille2->getStyle('A3:M3')->applyFromArray($styleArray);
-    $feuille2->getStyle('A4:M4')->applyFromArray($styleArray);
-    $feuille2->getStyle('A5:M5')->applyFromArray($styleArray);*/
+    $locale = 'fr_FR';
+    $fmt = new NumberFormatter($locale, NumberFormatter::SPELLOUT);
+    $totalExistantTexteMaj=strtoupper($fmt->format($totalExistant));
+    $totalArticlesTexteMaj=strtoupper($fmt->format($totalArticles));
+    $totalExistantTexte=$fmt->format($totalExistant);
+    $totalArticlesTexte=$fmt->format($totalArticles);
 
-    $feuille2->setCellValue("A". 7,"ARRETE le présent procès-verbal de recensement au nombre de : Sept cent soixante-treize (773) articles et à la somme de :");
-    $feuille2->setCellValue("A". 8,"QUATRE MILLIARDS NEUF CENT SOIXANTE-DOUZE MILLIONS DEUX CENT TRENTE-SEPT MILLE");
-    $feuille2->setCellValue("A". 9,"SEPT CENT TREIZE ARIARY SOIXANTE");
-    $feuille2->setCellValue("A". 9,"(4 792 237 713,60 Ar)");
+    $feuille2->setCellValue("A". 7,"ARRETE le présent procès-verbal de recensement au nombre de : $totalArticlesTexteMaj ($totalArticles) articles et à la somme de :");
+    $feuille2->setCellValue("A". 8,$totalExistantTexteMaj);
+    $feuille2->setCellValue("A". 9,"($totalExistant)");
     $feuille2->mergeCells('A7:M7');
     $feuille2->mergeCells('A8:M8');
     $feuille2->mergeCells('A9:M9');
     $feuille2->mergeCells('A10:M10');
 
+    //nombre d'article ayant des excedents
+    $nbArticleAvecExcedent = DB::table('recensements')
+    ->where('excedentParArticle', '!=', 0)
+    ->count();
+    $nbArticleAvecExcedentTexte=$fmt->format($nbArticleAvecExcedent);
+    $totalExcedentTexte=$fmt->format($totalExcedent);
+
+    //nombre d'article ayant des deficits
+    $nbArticleAvecDeficit = DB::table('recensements')
+    ->where('deficitParArticle', '!=', 0)
+    ->count();
+    $nbArticleAvecDeficitTexte=$fmt->format($nbArticleAvecDeficit);
+    $totalDeficitTexte=$fmt->format($totalDeficit);
+
+
     // Insérez du texte dans une cellule (émulant une zone de texte)
-    $text1 = "ARRETE Le présent procès-verbal à  (1) Zéro article comportant des excédents représentant une valeur de (1) NEANT; et (1) Zéro articles comportant des déficits représentant ";
+    $text1 = "ARRETE Le présent procès-verbal à  (1) $nbArticleAvecExcedentTexte article comportant des excédents représentant une valeur de (1) $totalExcedentTexte;
+     et (1) $nbArticleAvecDeficitTexte articles comportant des déficits représentant ";
     $feuille2->setCellValue('A12', $text1);
-    $text2 = "une valeur de (1) NEANT; et Spet cent soixante-treize (773) articles des existants représentant une valeur de (1) Quatre milliards neuf cent soixante-douze millions ";
+    $text2 = "une valeur de (1) $totalDeficitTexte; et $totalArticlesTexte ($totalArticles) articles des existants représentant une valeur de (1)  ";
     $feuille2->setCellValue('A13', $text2);
-    $text3 = "deux cent trente-sept mille sept cent treize ariary soixante (Ar 4 792 237 713,60) ";
+    $text3 = "$totalExistantTexte (Ar $totalExistant) ";
     $feuille2->setCellValue('A14', $text3);
     $text4 = "Le Comptable ............................................................ Antananarivo, le 31 décembre 2020";
     $feuille2->setCellValue('A16', $text4);
