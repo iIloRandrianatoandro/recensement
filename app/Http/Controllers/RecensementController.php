@@ -125,20 +125,89 @@ class RecensementController extends Controller
         return $recensement;
     } 
     public function genererRecapitulatif($annee){
-        //valeur totale excedents
-        $valeurTotaleExcedent=Db::select("select sum(recensements.excedentParArticle * recensements.prixUnite) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and nomenclature='5'");
-        //valeur totale deficits
-        $valeurTotaleDeficit=Db::select("select sum(deficitParArticle * prixUnite) from recensements");
-        //valeur totale existants
-        $valeurTotaleExistant=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements");
-        //nombre d'articles par nomenclature
-        $nbMaterielsParNomenclature=DB::select("select materiels.nomenclature,count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel group by materiels.nomenclature");
-        //nombre d'articles total //nbArticle=existantApresEcriture+excedent-deficit
-        $nbArticle=DB::select("select count(idRecensement)from recensements");
+        // Liste des nomenclatures
+        $nomenclatures = DB::table('materiels')
+            ->select('nomenclature')
+            ->groupBy('nomenclature')
+            ->get();
+        
+        //excedent par nomenclature
+        $excedentParNomenclature = [];
+        foreach ($nomenclatures as $nomenclature) {
+            $valeurExcedent = DB::table('recensements')
+                ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+                ->where('materiels.nomenclature', $nomenclature->nomenclature)
+                ->sum(DB::raw('recensements.excedentParArticle * recensements.prixUnite'));
+    
+            $excedentParNomenclature[$nomenclature->nomenclature] = $valeurExcedent;
+        }
+        //valeur totale des excedents
+        $valeurTotaleExcedent = DB::table('recensements')
+            ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+            ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+            ->first();
+        //deficit par nomenclature
+        $deficitParNomenclature = [];
+        foreach ($nomenclatures as $nomenclature) {
+            $valeurDeficit = DB::table('recensements')
+                ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+                ->where('materiels.nomenclature', $nomenclature->nomenclature)
+                ->sum(DB::raw('recensements.deficitParArticle * recensements.prixUnite'));
+    
+            $deficitParNomenclature[$nomenclature->nomenclature] = $valeurDeficit;
+        }
+        //valeur totale des deficits
+        $valeurTotaleDeficit = DB::table('recensements')
+            ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+            ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+            ->first();
+        // Existant par nomenclature
+        $existantParNomenclature = [];
+        foreach ($nomenclatures as $nomenclature) {
+            $valeurExistant = DB::table('recensements')
+            ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+            ->select(DB::raw('SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as totalExistant'))
+            ->where('materiels.nomenclature', $nomenclature->nomenclature)
+            ->first();
+
+            $existantParNomenclature[$nomenclature->nomenclature] = $valeurExistant->totalExistant;
+        }
+
+        // Valeur totale des existants
+        $valeurTotaleExistant = DB::table('recensements')
+        ->select(DB::raw('SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as totalExistant'))
+        ->first();
+        // Nombre d'articles par nomenclature
+        $nbArticleParNomenclature = [];
+        foreach ($nomenclatures as $nomenclature) {
+            $nbArticle = DB::table('recensements')
+            ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+            ->select(DB::raw('COUNT(recensements.idRecensement) as totalArticles'))
+            ->where('materiels.nomenclature', $nomenclature->nomenclature)
+            ->first();
+
+            $nbArticleParNomenclature[$nomenclature->nomenclature] = $nbArticle->totalArticles;
+        }
+
+        // Nombre total d'articles
+        $nbArticleTotal = DB::table('recensements')
+        ->select(DB::raw('COUNT(idRecensement) as totalArticles'))
+        ->first();
         //liste recensement
         $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
 
-        $a=['valeurTotaleExcedent'=>$valeurTotaleExcedent[0]->{'sum(excedentParArticle * prixUnite)'},'valeurTotaleDeficit'=>$valeurTotaleDeficit[0]->{'sum(deficitParArticle * prixUnite)'},'valeurTotaleExistant'=>$valeurTotaleExistant[0]->{'sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite)'},'nbMaterielsParNomenclature'=>$nbMaterielsParNomenclature,'nbArticle'=>$nbArticle[0]->{'count(idRecensement)'},'listeRecensementsTab'=>$listeRecensementsTab];
+        $a = [
+            'listeRecensementsTab' => $listeRecensementsTab,
+            'nomenclatures' => $nomenclatures,
+            'excedentParNomenclature' => $excedentParNomenclature,
+            'valeurTotaleExcedent' => $valeurTotaleExcedent,
+            'deficitParNomenclature' => $deficitParNomenclature,
+            'valeurTotaleDeficit' => $valeurTotaleDeficit,
+            'existantParNomenclature' => $existantParNomenclature,
+            'valeurTotaleExistant' => $valeurTotaleExistant,
+            'nbArticleParNomenclature' => $nbArticleParNomenclature,
+            'nbArticleTotal' => $nbArticleTotal,
+        ];
         return $a;
     }
     public function consulterEvolution5Ans(){
