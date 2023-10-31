@@ -20,7 +20,7 @@ class RecensementController extends Controller
 {
     public function import(Request $req)
     {   
-        $excel = Excel::toArray(new RecensementsImport, $req->file);//file nom champ du fichier
+        $excel = Excel::toArray(new RecensementsImport, $req->file);//file : nom champ du fichier
         $annee=$req->annee;
         $premiereUtilisation=$req->premiereUtilisation;
         $nomenclature=$req->nomenclature;
@@ -239,6 +239,7 @@ public function export()
     $feuille1 = $excel->getActiveSheet();  // Obtenez la feuille active
     $feuille1->setTitle('rec3'); // Définissez le titre de la feuille
 
+    //titres
     $feuille1->setCellValue("A". 1,"Désignation des matières, denrées et objets");
     $feuille1->setCellValue("B". 1,"Espèce des unités");
     $feuille1->setCellValue("C". 1,"Prix de l'unité");
@@ -259,6 +260,7 @@ public function export()
     $feuille1->setCellValue("J". 3,"par article");
     $feuille1->setCellValue("K". 3,"par numéro de la nomenclature sommaire");
 
+    //fusion cellules
     $feuille1->mergeCells('A1:A3');
     $feuille1->mergeCells('B1:B3');
     $feuille1->mergeCells('C1:C3');
@@ -273,26 +275,31 @@ public function export()
     $feuille1->mergeCells('M1:M3');
     $feuille1->mergeCells('D1:E1');
     
-    /*$row = 2; // Ligne de départ
-    $col = 'A'; // Colonne de départ
-    foreach ($titles2 as $title) {
-        $feuille1->setCellValue($col . $row, $title);
-        $col++;
-    }*/
-    // Fusionnez les cellules pour le titre
-   // $feuille1->mergeCells('A1:A2'); // Fusionnez de A1 à K1
-
-    // Utilisez les données directement depuis la requête
-   /* $row = 3; // Commencez à la ligne suivante
-    foreach ($listeRecensementsTab as $data) {
-        $col = 'A'; // Colonne de départ
-        foreach ($data as $value) {
-            $feuille1->setCellValue($col . $row, $value);
-            $col++;
+    //contenu
+//return $listeRecensementsTab;
+// Insérer les données dans la feuille de calcul
+$rowIndex = 5;
+foreach ($listeRecensementsTab as $recensement) {
+    $columnIndex = 1;
+    foreach ($recensement as $value) {
+        //return $value;
+        if(($columnIndex==9)||($columnIndex==11)){
+            $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, "");
+            $feuille1->setCellValueByColumnAndRow($columnIndex+1, $rowIndex, $value);
+            $columnIndex++;
+            //return $value;
         }
-        $row++;
-    }*/
-      // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
+        else{
+            $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);            
+        }
+        $columnIndex++;
+    }
+    $rowIndex++;
+}
+
+
+
+    // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
     $lastColumn = $feuille1->getHighestDataColumn();
     $lastRow = $feuille1->getHighestDataRow();
 
@@ -307,31 +314,52 @@ public function export()
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
 
+    //derniere page
     $feuille2=$excel->createSheet();
     $feuille2->setTitle('recap');
 
+    //tableau recapitulatif nomenclature
+    //titre tableau
     $feuille2->setCellValue("A". 1,"NOMENCLATURE");
     $feuille2->setCellValue("B". 1,"EXCEDENTS");
     $feuille2->setCellValue("E". 1,"DEFICITS");
     $feuille2->setCellValue("I". 1,"EXISTANTS");
     $feuille2->setCellValue("L". 1,"ARTICLES");
 
-    $feuille2->setCellValue("A". 2,"03");
-    $feuille2->setCellValue("A". 3,"05");
-    $feuille2->setCellValue("A". 4,"10");
-    $feuille2->setCellValue("A". 5,"TOTAL");
+    //liste des nomenclatures
+    $nomenclatures=Db::select('select nomenclature from materiels group by nomenclature');
+    $nomenclaturesTab=[];
+    foreach ($nomenclatures as $a){
+        $nomenclaturesTab[]=$a->nomenclature;
+    }
+    //mettre les comenclatures dans le tableau
+    $ligne="A"; $colonne=2;
+    foreach ($nomenclaturesTab as $a){
+        $feuille2->setCellValue($ligne. $colonne,$a);
+        $colonne++;
+    }
+    $feuille2->setCellValue("A". $colonne,"TOTAL");
     
+    //fusion cellules
+    //premiere ligne
     $feuille2->mergeCells('B1:D1');
     $feuille2->mergeCells('E1:H1');
     $feuille2->mergeCells('I1:K1');
     $feuille2->mergeCells('L1:M1');
+    //nombre de ligne 
+    $nbLigne = count($nomenclaturesTab);
+
+    for ($i = 0; $i < $nbLigne+1; $i++) {
+     $a = $i + 2;
+        $feuille2->mergeCells('B' . $a . ':' . 'D' . $a);
+        $feuille2->mergeCells('E' . $a . ':' . 'H' . $a);
+        $feuille2->mergeCells('I' . $a . ':' . 'K' . $a);
+        $feuille2->mergeCells('L' . $a . ':' . 'M' . $a);
+    }
+    //$nbMaterielsParNomenclature = DB::table('recensements')->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')->select('materiels.nomenclature', DB::raw('count(recensements.idRecensement) as total'))->groupBy('materiels.nomenclature')->get();
+    //return $nbMaterielsParNomenclature;
     
-    $feuille2->mergeCells('B2:D2');
-    $feuille2->mergeCells('E2:H2');
-    $feuille2->mergeCells('I2:K2');
-    $feuille2->mergeCells('L2:M2');
-    
-    $feuille2->mergeCells('B3:D3');
+    /*$feuille2->mergeCells('B3:D3');
     $feuille2->mergeCells('E3:H3');
     $feuille2->mergeCells('I3:K3');
     $feuille2->mergeCells('L3:M3');
@@ -350,7 +378,7 @@ public function export()
     $feuille2->getStyle('A2:M2')->applyFromArray($styleArray);
     $feuille2->getStyle('A3:M3')->applyFromArray($styleArray);
     $feuille2->getStyle('A4:M4')->applyFromArray($styleArray);
-    $feuille2->getStyle('A5:M5')->applyFromArray($styleArray);
+    $feuille2->getStyle('A5:M5')->applyFromArray($styleArray);*/
 
     $feuille2->setCellValue("A". 7,"ARRETE le présent procès-verbal de recensement au nombre de : Sept cent soixante-treize (773) articles et à la somme de :");
     $feuille2->setCellValue("A". 8,"QUATRE MILLIARDS NEUF CENT SOIXANTE-DOUZE MILLIONS DEUX CENT TRENTE-SEPT MILLE");
