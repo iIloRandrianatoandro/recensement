@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\RecensementController;
 use App\Http\Controllers\MaterielController;
+use App\Http\Controllers\authentification;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,4 +40,14 @@ Route::controller(MaterielController::class)->group(function(){
     Route::get('rechercherMateriel/{designation}','rechercherMateriel'); 
     Route::get('voirMateriel/{id}','voirMateriel'); 
     Route::post('modifierMateriel/{idMateriel}','modifierMateriel'); 
+});
+//authentification
+Route::controller(authentification::class)->group(function(){
+    Route::post('seConnecter','seConnecter');
+    Route::get('seDeconnecter','seDeconnecter');
+    Route::post('creerUtilisateur','creerUtilisateur');
+    Route::post('modifierUtilisateur/{id}','modifierUtilisateur');
+    Route::post('supprimerUtilisateur/{id}','supprimerUtilisateur');
+    Route::get('/listerUtilisateur', 'listerUtilisateur');
+    Route::get('voirUtilisateur/{id}','voirUtilisateur');
 });
