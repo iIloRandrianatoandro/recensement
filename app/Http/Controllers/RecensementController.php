@@ -27,9 +27,12 @@ class RecensementController extends Controller
 
         $annee=$req->annee;
         $premiereUtilisation=$req->premiereUtilisation;
-        //$nomenclature=$req->nomenclature;
-        
-        // Assuming you have two sheets: Sheet1 and Sheet2
+
+        $nbRecensementAnnee=DB::select(" select count(idRecensement) from recensements where annee=$annee");
+        //return $nbRecensementAnnee[0]->{'count(idRecensement)'};
+
+        if(($nbRecensementAnnee[0]->{'count(idRecensement)'})===0){
+            // Assuming you have two sheets: Sheet1 and Sheet2
         $nomenclature3 = $spreadsheet->getSheetByName('3');
         $nomenclature5 = $spreadsheet->getSheetByName('5');
         $nomenclature10 = $spreadsheet->getSheetByName('10');
@@ -58,7 +61,7 @@ class RecensementController extends Controller
                 $especeUnite=$array[2];
                 $existantApresEcriture=$array[7];
                 // s'il y a une nouvelle entree de materiel ou premiere utilisation, ajouter le materiel à la base de donnees 
-                if(($array[4]!=null) || ($premiereUtilisation==="true")){// $array[4]=case entree 
+                if(($array[5]!=null) || ($premiereUtilisation==="true")){// $array[5]=case entree pendant l'annee
                     //creer materiel
                     $materiel=new materiel;
                     $materiel->designation=$designation;
@@ -109,13 +112,19 @@ class RecensementController extends Controller
         importerDonnee($nomenclature3Tab,'3',$annee,$premiereUtilisation);
         importerDonnee($nomenclature5Tab,'5',$annee,$premiereUtilisation);
         importerDonnee($nomenclature10Tab,'10',$annee,$premiereUtilisation);
+        return "importer";
+        }
+        else{
+            return "annee deja existante";
+        }
+        
     }
     public function listeMaterielARecense($annee){   
         $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         return $listeMaterielARecense;
     }
-    public function rechercherRecensement($designation){
-        $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and recense=false; ");
+    public function rechercherMaterielARecenser($designation,$annee){//utilisteur
+        $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and recense=false and annee='$annee'; ");
         return $listeMaterielCorrespondant;
     }
     public function voirRecensement($id)
@@ -149,6 +158,10 @@ class RecensementController extends Controller
         $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         return ['listeMateriel'=>$listeMateriel,'nbMateriels'=>$nbMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
     }
+    public function rechercherRecensement($designation,$annee){//administrateur
+        $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and annee=$annee; ");
+        return $listeMaterielCorrespondant;
+    }
     public function modifierRecensement(Request $req , $idRecensement)
     { 
         $recensement=recensement::find($idRecensement);
@@ -156,6 +169,7 @@ class RecensementController extends Controller
         $recensement->excedentParArticle =$req->excedentParArticle ;
         $recensement->prixUnite =$req->prixUnite ;
         $recensement->observation =$req->observation ;
+        $recensement->recense=true;
         $recensement->save();
         return $recensement;
     } 
@@ -172,6 +186,8 @@ class RecensementController extends Controller
             $valeurExcedent = DB::table('recensements')
                 ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
                 ->where('materiels.nomenclature', $nomenclature->nomenclature)
+                ->where('recensements.annee', $annee)
+                ->where('recensements.recense', true)
                 ->sum(DB::raw('recensements.excedentParArticle * recensements.prixUnite'));
     
             $excedentParNomenclature[$nomenclature->nomenclature] = $valeurExcedent;
@@ -180,6 +196,8 @@ class RecensementController extends Controller
         $valeurTotaleExcedent = DB::table('recensements')
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
             ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+            ->where('recensements.annee', $annee)
+            ->where('recensements.recense', true)
             ->first();
         //deficit par nomenclature
         $deficitParNomenclature = [];
@@ -187,6 +205,8 @@ class RecensementController extends Controller
             $valeurDeficit = DB::table('recensements')
                 ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
                 ->where('materiels.nomenclature', $nomenclature->nomenclature)
+                ->where('recensements.annee', $annee)
+                ->where('recensements.recense', true)
                 ->sum(DB::raw('recensements.deficitParArticle * recensements.prixUnite'));
     
             $deficitParNomenclature[$nomenclature->nomenclature] = $valeurDeficit;
@@ -195,6 +215,8 @@ class RecensementController extends Controller
         $valeurTotaleDeficit = DB::table('recensements')
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
             ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+            ->where('recensements.annee', $annee)
+            ->where('recensements.recense', true)
             ->first();
         // Existant par nomenclature
         $existantParNomenclature = [];
@@ -203,6 +225,8 @@ class RecensementController extends Controller
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
             ->select(DB::raw('SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as totalExistant'))
             ->where('materiels.nomenclature', $nomenclature->nomenclature)
+            ->where('recensements.annee', $annee)
+            ->where('recensements.recense', true)
             ->first();
 
             $existantParNomenclature[$nomenclature->nomenclature] = $valeurExistant->totalExistant;
@@ -211,6 +235,8 @@ class RecensementController extends Controller
         // Valeur totale des existants
         $valeurTotaleExistant = DB::table('recensements')
         ->select(DB::raw('SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as totalExistant'))
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
         // Nombre d'articles par nomenclature
         $nbArticleParNomenclature = [];
@@ -219,6 +245,8 @@ class RecensementController extends Controller
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
             ->select(DB::raw('COUNT(recensements.idRecensement) as totalArticles'))
             ->where('materiels.nomenclature', $nomenclature->nomenclature)
+            ->where('recensements.annee', $annee)
+            ->where('recensements.recense', true)
             ->first();
 
             $nbArticleParNomenclature[$nomenclature->nomenclature] = $nbArticle->totalArticles;
@@ -227,12 +255,13 @@ class RecensementController extends Controller
         // Nombre total d'articles
         $nbArticleTotal = DB::table('recensements')
         ->select(DB::raw('COUNT(idRecensement) as totalArticles'))
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
         //liste recensement
-        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel ");
+        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel and recensements.annee=$annee and recense=true");
 
         $a = [
-            'listeRecensementsTab' => $listeRecensementsTab,
             'nomenclatures' => $nomenclatures,
             'excedentParNomenclature' => $excedentParNomenclature,
             'valeurTotaleExcedent' => $valeurTotaleExcedent,
@@ -242,6 +271,7 @@ class RecensementController extends Controller
             'valeurTotaleExistant' => $valeurTotaleExistant,
             'nbArticleParNomenclature' => $nbArticleParNomenclature,
             'nbArticleTotal' => $nbArticleTotal,
+            'listeRecensementsTab' => $listeRecensementsTab,
         ];
         return $a;
     }
@@ -281,7 +311,7 @@ class RecensementController extends Controller
         $annee5Quantite=DB::select("select (recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle)from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.idMateriel='$materielID' and annee='$annee5'");
         return ['annee1Valeur'=>$annee1Valeur,'annee1Quantite'=>$annee1Quantite,'annee2Valeur'=>$annee2Valeur,'annee2Quantite'=>$annee2Quantite,'annee2Quantite'=>$annee2Quantite,'annee3Valeur'=>$annee3Valeur,'annee3Quantite'=>$annee3Quantite,'annee4Valeur'=>$annee4Valeur,'annee4Quantite'=>$annee4Quantite,'annee5Valeur'=>$annee5Valeur,'annee5Quantite'=>$annee5Quantite];
     }
-public function export()
+public function export($annee)
 {    
     // Créez un objet Excel
     $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -297,6 +327,8 @@ public function export()
         $listeRecensementsTab = DB::table('recensements')
     ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
     ->where('materiels.nomenclature', $nomenclature) 
+    ->where('recensements.annee', $annee)
+    ->where('recensements.recense', true)
     ->select(
         'materiels.designation as designation' ,
         'materiels.especeUnite as especeUnite',
@@ -416,6 +448,8 @@ public function export()
         ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
         ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
         ->where('materiels.nomenclature', $a)
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
 
         // valeur totale des excédents
@@ -427,6 +461,8 @@ public function export()
     $valeurTotaleExcedent = DB::table('recensements')
         ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
         ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
 
     // valeur totale des excédents
@@ -440,6 +476,8 @@ public function export()
          ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
          ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
          ->where('materiels.nomenclature', $a)
+         ->where('recensements.annee', $annee)
+         ->where('recensements.recense', true)
          ->first();
  
          // valeur totale des excédents
@@ -451,6 +489,8 @@ public function export()
      $valeurTotaleDeficit = DB::table('recensements')
          ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
          ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+         ->where('recensements.annee', $annee)
+         ->where('recensements.recense', true)
          ->first();
  
      // valeur totale des excédents
@@ -464,6 +504,8 @@ public function export()
         ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
        ->select(DB::raw('SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as totalExistant'))
        ->where('materiels.nomenclature', $a)
+       ->where('recensements.annee', $annee)
+       ->where('recensements.recense', true)
        ->first();
    
        //valeur totale des existants
@@ -474,6 +516,8 @@ public function export()
      }
      $valeurTotaleExistant = DB::table('recensements')
     ->select(DB::raw('SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as totalExistant'))
+    ->where('recensements.annee', $annee)
+    ->where('recensements.recense', true)
     ->first();
 
     //valeur totale des existants
@@ -487,6 +531,8 @@ public function export()
        ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
         ->select(DB::raw('COUNT(recensements.idRecensement) as totalArticles'))
         ->where('materiels.nomenclature', $a)
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
 
         //nombre total d'articles
@@ -497,6 +543,8 @@ public function export()
      }
      $nbArticle = DB::table('recensements')
         ->select(DB::raw('COUNT(idRecensement) as totalArticles'))
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
         ->first();
 
     //nombre total d'articles
@@ -538,6 +586,8 @@ public function export()
     //nombre d'article ayant des excedents
     $nbArticleAvecExcedent = DB::table('recensements')
     ->where('excedentParArticle', '!=', 0)
+    ->where('recensements.annee', $annee)
+    ->where('recensements.recense', true)
     ->count();
     $nbArticleAvecExcedentTexte=$fmt->format($nbArticleAvecExcedent);
     $totalExcedentTexte=$fmt->format($totalExcedent);
@@ -545,6 +595,8 @@ public function export()
     //nombre d'article ayant des deficits
     $nbArticleAvecDeficit = DB::table('recensements')
     ->where('deficitParArticle', '!=', 0)
+    ->where('recensements.annee', $annee)
+    ->where('recensements.recense', true)
     ->count();
     $nbArticleAvecDeficitTexte=$fmt->format($nbArticleAvecDeficit);
     $totalDeficitTexte=$fmt->format($totalDeficit);

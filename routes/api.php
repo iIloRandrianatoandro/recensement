@@ -25,15 +25,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::controller(RecensementController::class)->group(function(){
     Route::post('import','import'); 
     Route::get('listeMaterielARecense/{annee}','listeMaterielARecense'); 
-    Route::get('rechercherRecensement/{designation}','rechercherRecensement'); 
+    Route::get('rechercherMaterielARecenser/{designation}/{annee}','rechercherMaterielARecenser'); 
     Route::get('voirRecensement/{id}','voirRecensement'); 
     Route::post('recenserMateriel/{idRecensement}','recenserMateriel'); 
     Route::get('suivreFluxRecensement/{annee}','suivreFluxRecensement'); 
+    Route::get('rechercherRecensement/{designation}/{annee}','rechercherRecensement');
     Route::post('modifierRecensement/{idRecensement}','modifierRecensement'); 
     Route::get('genererRecapitulatif/{annee}','genererRecapitulatif'); 
     Route::get('consulterEvolution5Ans','consulterEvolution5Ans'); 
     Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel');
-    Route::get('export','export');  
+    Route::get('export/{annee}','export');  
 });
 Route::controller(MaterielController::class)->group(function(){
     Route::get('listeMateriel','listeMateriel'); 
