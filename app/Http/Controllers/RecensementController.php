@@ -16,64 +16,99 @@ use App\Models\materiel;
 use DB;
 use Carbon\Carbon;
 use NumberFormatter;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class RecensementController extends Controller
 {
     public function import(Request $req)
     {   
-        $excel = Excel::toArray(new RecensementsImport, $req->file);//file : nom champ du fichier
+        $file = $req->file('file');
+        $spreadsheet = IOFactory::load($file);//file : nom champ du fichier
+
         $annee=$req->annee;
         $premiereUtilisation=$req->premiereUtilisation;
-        $nomenclature=$req->nomenclature;
-        $array=array_slice($excel[0], 3); // ne prend pas en compte les 3 premiere lignes du fichier excel cad titres
-        foreach($array as $array){
-            // s'il y a une nouvelle entree de materiel ou premiere utilisation, ajouter le materiel à la base de donnees 
-            if(($array[3]!=null) || ($premiereUtilisation==="true")){ //s'il y a une nouvelle entree 
-                //creer materiel
-                $materiel=new materiel;
-                $materiel->designation=$array[0];
-                $materiel->nomenclature=$nomenclature;
-                $materiel->especeUnite=$array[7];
+        //$nomenclature=$req->nomenclature;
+        
+        // Assuming you have two sheets: Sheet1 and Sheet2
+        $nomenclature3 = $spreadsheet->getSheetByName('3');
+        $nomenclature5 = $spreadsheet->getSheetByName('5');
+        $nomenclature10 = $spreadsheet->getSheetByName('10');
+        
+        // Process data from Sheet1
+        $nomenclature3Feuille = $nomenclature3->toArray();
+        
+        // Process data from Sheet1
+        $nomenclature5Feuille = $nomenclature5->toArray();
+        // Process data from Sheet1
+        $nomenclature10Feuille = $nomenclature10->toArray();
 
-                $designation=$array[0];
+        //$array=array_slice($excel[0], 3); // ne prend pas en compte les 3 premiere lignes du fichier excel cad titres
+        $nomenclature3Tab=array_slice($nomenclature3Feuille, 3);
+        $nomenclature5Tab=array_slice($nomenclature5Feuille, 3);
+        $nomenclature10Tab=array_slice($nomenclature10Feuille, 3);
 
-                //nombre de doublon du materiel
-                $nbDoublonTableau = DB::select("SELECT COUNT(idMateriel) FROM materiels WHERE designation = :designation", ['designation' => $designation]);
-                $nbDoublon=$nbDoublonTableau[0]->{'COUNT(idMateriel)'};
-                $materiel->doublon=$nbDoublon+1;
-                $materiel->save();
-                //creer le recensement
-                $recensement=new recensement;
-                $recensement->prixUnite=doubleval($array[1]);
-                $recensement->existantApresEcriture=intval($array[5]);
-                // chercher l'id du materiel
-                $doublon=$nbDoublon+1;
-                $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $doublon]);
-                $idMateriel=$id[0]->{'idMateriel'};
-                $recensement->materiel_idMateriel=$idMateriel;
-                $recensement->annee=$annee;
-                $recensement->save();
-            }
-            else{ //ajout recensement sans nouvelle entree et non premiere utilisation
-                $designation=$array[0];
-                $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
-                foreach($listeDoublonTableau as $materiel){
-                    $materiel_idMateriel=$materiel->{'idMateriel'};
-                    $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_idMateriel = :materiel_idMateriel and annee= :annee", ['materiel_idMateriel' => $materiel_idMateriel,'annee'=>$annee]);
-                    $nbRecensement= $nbRecensementTableau[0]->{"count(idRecensement)"};
-                    if($nbRecensement==0){//recensement non existant sur le materiel
-                        //creer le recensement
-                        $recensement=new recensement;
-                        $recensement->prixUnite=doubleval($array[1]);
-                        $recensement->existantApresEcriture=intval($array[5]);
-                        $recensement->materiel_idMateriel=$materiel_idMateriel;
-                        $recensement->annee=$annee;
-                        $recensement->save();
-                        break;
+        function importerDonnee($array,$nomenclature,$annee,$premiereUtilisation){
+            foreach($array as $array){
+                if($array[1]==null){ //s'il n'y a pas de designation
+                    //ne rien faire
+                }
+                else{
+                    $designation=$array[1];
+                $prixUnite=$array[3];
+                $especeUnite=$array[2];
+                $existantApresEcriture=$array[7];
+                // s'il y a une nouvelle entree de materiel ou premiere utilisation, ajouter le materiel à la base de donnees 
+                if(($array[4]!=null) || ($premiereUtilisation==="true")){// $array[4]=case entree 
+                    //creer materiel
+                    $materiel=new materiel;
+                    $materiel->designation=$designation;
+                    $materiel->nomenclature=$nomenclature;
+                    $materiel->especeUnite=$especeUnite;
+    
+    
+                    //nombre de doublon du materiel
+                    $nbDoublonTableau = DB::select("SELECT COUNT(idMateriel) FROM materiels WHERE designation = :designation", ['designation' => $designation]);
+                    $nbDoublon=$nbDoublonTableau[0]->{'COUNT(idMateriel)'};
+                    $materiel->doublon=$nbDoublon+1;
+                    $materiel->save();
+                    //creer le recensement
+                    $recensement=new recensement;
+                    $recensement->prixUnite=doubleval($prixUnite);
+                    $recensement->existantApresEcriture=intval($existantApresEcriture);
+                    // chercher l'id du materiel
+                    $doublon=$nbDoublon+1;
+                    $id = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation and doublon= :doublon", ['designation' => $designation,'doublon' => $doublon]);
+                    $idMateriel=$id[0]->{'idMateriel'};
+                    $recensement->materiel_idMateriel=$idMateriel;
+                    $recensement->annee=$annee;
+                    $recensement->save();
+                }
+                else{ //ajout recensement sans nouvelle entree et non premiere utilisation
+                    $listeDoublonTableau = DB::select("SELECT idMateriel FROM materiels WHERE designation = :designation", ['designation' => $designation]);
+                    foreach($listeDoublonTableau as $materiel){
+                        $materiel_idMateriel=$materiel->{'idMateriel'};
+                        $nbRecensementTableau=DB::select("SELECT count(idRecensement) FROM recensements WHERE materiel_idMateriel = :materiel_idMateriel and annee= :annee", ['materiel_idMateriel' => $materiel_idMateriel,'annee'=>$annee]);
+                        $nbRecensement= $nbRecensementTableau[0]->{"count(idRecensement)"};
+                        if($nbRecensement==0){//recensement non existant sur le materiel
+                            //creer le recensement
+                            $recensement=new recensement;
+                            $recensement->prixUnite=doubleval($prixUnite);
+                            $recensement->existantApresEcriture=intval($existantApresEcriture);
+                            $recensement->materiel_idMateriel=$materiel_idMateriel;
+                            $recensement->annee=$annee;
+                            $recensement->save();
+                            break;
+                        }
                     }
                 }
+                }
             }
+
         }
+        
+        importerDonnee($nomenclature3Tab,'3',$annee,$premiereUtilisation);
+        importerDonnee($nomenclature5Tab,'5',$annee,$premiereUtilisation);
+        importerDonnee($nomenclature10Tab,'10',$annee,$premiereUtilisation);
     }
     public function listeMaterielARecense($annee){   
         $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
