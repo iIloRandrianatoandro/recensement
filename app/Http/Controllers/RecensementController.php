@@ -20,13 +20,17 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class RecensementController extends Controller
 {
-    public function import(Request $req)
+    public function importer(Request $req)
     {   
         $file = $req->file('file');
         $spreadsheet = IOFactory::load($file);//file : nom champ du fichier
 
         $annee=$req->annee;
-        $premiereUtilisation=$req->premiereUtilisation;
+        //$annee=2029;
+        $premiereUtilisation=false;
+        $nbMateriel=DB::select("select count(idMateriel) from materiels;");
+        if (($nbMateriel[0]->{"count(idMateriel)"})===0){$premiereUtilisation=true;}
+        //$nb=$nbMateriel[0]->{"count(idMateriel)"};
 
         $nbRecensementAnnee=DB::select(" select count(idRecensement) from recensements where annee=$annee");
         //return $nbRecensementAnnee[0]->{'count(idRecensement)'};
@@ -61,7 +65,7 @@ class RecensementController extends Controller
                 $especeUnite=$array[2];
                 $existantApresEcriture=$array[7];
                 // s'il y a une nouvelle entree de materiel ou premiere utilisation, ajouter le materiel à la base de donnees 
-                if(($array[5]!=null) || ($premiereUtilisation==="true")){// $array[5]=case entree pendant l'annee
+                if(($array[5]!=null) || ($premiereUtilisation===true)){// $array[5]=case entree pendant l'annee
                     //creer materiel
                     $materiel=new materiel;
                     $materiel->designation=$designation;
@@ -120,7 +124,7 @@ class RecensementController extends Controller
         
     }
     public function listeMaterielARecense($annee){   
-        $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
+        $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation,materiels.nomenclature,recensements.prixUnite from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         return $listeMaterielARecense;
     }
     public function rechercherMaterielARecenser($designation,$annee){//utilisteur
@@ -146,8 +150,6 @@ class RecensementController extends Controller
     public function suivreFluxRecensement($annee){
         //liste Materiels a recenser durant l'année
         $listeMateriel=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
-        //nombre de materiels a recenser durant l'annee
-        $nbMateriels=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
         //nombre de materiels recensés
         $nbMaterielsRecenses=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //nombre de materiels qui restent a recenser
@@ -156,7 +158,9 @@ class RecensementController extends Controller
         $listeMaterielRecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //liste de materiels qui reste a recenser
         $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
-        return ['listeMateriel'=>$listeMateriel,'nbMateriels'=>$nbMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
+        //nombre total de materiels 
+        $nbTotalMateriels=DB::select("select count(idRecensement) from recensements where annee='$annee'");
+        return ['nbTotalMateriels'=>$nbTotalMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMateriel'=>$listeMateriel,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
     }
     public function rechercherRecensement($designation,$annee){//administrateur
         $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and annee=$annee; ");
@@ -167,7 +171,6 @@ class RecensementController extends Controller
         $recensement=recensement::find($idRecensement);
         $recensement->deficitParArticle =$req->deficitParArticle ;
         $recensement->excedentParArticle =$req->excedentParArticle ;
-        $recensement->prixUnite =$req->prixUnite ;
         $recensement->observation =$req->observation ;
         $recensement->recense=true;
         $recensement->save();
@@ -260,7 +263,18 @@ class RecensementController extends Controller
         ->first();
         //liste recensement
         $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel and recensements.annee=$annee and recense=true");
-
+        //nombre d'article ayant des excedents
+        $nbArticleAvecExcedent = DB::table('recensements')
+        ->where('excedentParArticle', '!=', 0)
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
+        ->count();
+        //nombre d'article ayant des deficits
+        $nbArticleAvecDeficit = DB::table('recensements')
+        ->where('deficitParArticle', '!=', 0)
+        ->where('recensements.annee', $annee)
+        ->where('recensements.recense', true)
+        ->count();
         $a = [
             'nomenclatures' => $nomenclatures,
             'excedentParNomenclature' => $excedentParNomenclature,
@@ -271,6 +285,8 @@ class RecensementController extends Controller
             'valeurTotaleExistant' => $valeurTotaleExistant,
             'nbArticleParNomenclature' => $nbArticleParNomenclature,
             'nbArticleTotal' => $nbArticleTotal,
+            'nbArticleAvecExcedent'=>$nbArticleAvecExcedent,
+            'nbArticleAvecDeficit'=>$nbArticleAvecDeficit,
             'listeRecensementsTab' => $listeRecensementsTab,
         ];
         return $a;
@@ -398,6 +414,10 @@ public function export($annee)
             else{
                 $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);            
             }
+            if(($columnIndex==1)||($columnIndex==12)||($columnIndex==13)){
+             // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
+            $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
+            }
             $columnIndex++;
         }
         $rowIndex++;
@@ -419,6 +439,8 @@ public function export($annee)
     ];
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
+    // Définir la largeur de la colonne A
+    $feuille1->getColumnDimension('A')->setWidth(80);
     }
    
 
@@ -441,7 +463,7 @@ public function export($annee)
         $colonne++;
     }
     $feuille2->setCellValue("A". $colonne,"TOTAL");
-    //mettre la vealeur des excedents
+    //mettre la valeur des excedents par nomenclature
     $ligne="B"; $colonne=2;
     foreach ($nomenclaturesTab as $a){
         $valeurTotaleExcedent = DB::table('recensements')
@@ -452,7 +474,7 @@ public function export($annee)
         ->where('recensements.recense', true)
         ->first();
 
-        // valeur totale des excédents
+        // valeur des excédents
         $totalExcedent = $valeurTotaleExcedent->totalExcedent;
         
         $feuille2->setCellValue($ligne. $colonne,$totalExcedent);
@@ -480,7 +502,7 @@ public function export($annee)
          ->where('recensements.recense', true)
          ->first();
  
-         // valeur totale des excédents
+         // valeur des deficits par nomenclature
          $totalDeficit = $valeurTotaleDeficit->totalDeficit;
          
          $feuille2->setCellValue($ligne. $colonne,$totalDeficit);
@@ -493,7 +515,7 @@ public function export($annee)
          ->where('recensements.recense', true)
          ->first();
  
-     // valeur totale des excédents
+     // valeur totale des deficits
      $totalDeficit = $valeurTotaleDeficit->totalDeficit;
      $feuille2->setCellValue("E". $colonne,$totalDeficit);
 
@@ -508,7 +530,7 @@ public function export($annee)
        ->where('recensements.recense', true)
        ->first();
    
-       //valeur totale des existants
+       //valeur des existants par nomenclature
        $totalExistant = $valeurTotaleExistant->totalExistant;
          
          $feuille2->setCellValue($ligne. $colonne,$totalExistant);
@@ -535,7 +557,7 @@ public function export($annee)
         ->where('recensements.recense', true)
         ->first();
 
-        //nombre total d'articles
+        //nombre d'articles par nomenclature
         $totalArticles = $nbArticle->totalArticles;
          
         $feuille2->setCellValue($ligne. $colonne,$totalArticles);
@@ -669,12 +691,7 @@ public function export($annee)
     $feuille2->getStyle('C26')->applyFromArray($style);
     $feuille2->getStyle('B28')->applyFromArray($style);
     $feuille2->getStyle('C33')->applyFromArray($style);
-
-
-
-    // Ajustez la largeur de la colonne pour s'adapter au contenu
-    $feuille1->getColumnDimension('A')->setAutoSize(true);
-    
+   
 
     // Générez le fichier Excel
     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($excel);
