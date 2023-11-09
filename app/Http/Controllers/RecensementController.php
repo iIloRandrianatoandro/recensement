@@ -145,20 +145,21 @@ class RecensementController extends Controller
         $recensement->save();
         return $recensement;
     } 
-    public function suivreFluxRecensement($annee){
+    public function suivreFluxRecensement(){
+        $annee=Carbon::now()->year;
         //liste Materiels a recenser durant l'année
-        $listeMateriel=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
+        $listeMateriel=DB::select("select materiels.designation,materiels.nomenclature,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee'");
         //nombre de materiels recensés
         $nbMaterielsRecenses=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //nombre de materiels qui restent a recenser
         $nbMaterielsARecenser=DB::select("select count(recensements.idRecensement) from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         //liste de materiels deja recensé
-        $listeMaterielRecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
+        $listeMaterielRecense=DB::select("select materiels.designation,materiels.nomenclature,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=true");
         //liste de materiels qui reste a recenser
-        $listeMaterielARecense=DB::select("select materiels.designation,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
+        $listeMaterielARecense=DB::select("select materiels.designation,materiels.nomenclature,recensements.*  from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         //nombre total de materiels 
         $nbTotalMateriels=DB::select("select count(idRecensement) from recensements where annee='$annee'");
-        return ['nbTotalMateriels'=>$nbTotalMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMateriel'=>$listeMateriel,'listeMaterielFRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
+        return ['nbTotalMateriels'=>$nbTotalMateriels,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsRecenses'=>$nbMaterielsRecenses,'nbMaterielsARecenser'=>$nbMaterielsARecenser,'listeMateriel'=>$listeMateriel,'listeMaterielRecense'=>$listeMaterielRecense,'listeMaterielARecense'=>$listeMaterielARecense];
     }
     public function rechercherRecensement($designation,$annee){//administrateur
         $listeMaterielCorrespondant=DB::select("select materiels.designation,recensements.* from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and materiels.designation like '%$designation%' and annee=$annee; ");
