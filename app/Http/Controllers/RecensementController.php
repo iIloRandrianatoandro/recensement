@@ -20,22 +20,24 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class RecensementController extends Controller
 {
+    public function listerAnneeAvecRecensement(){
+        $listeAnnee=DB::select("select annee from recensements group by annee");
+        foreach($listeAnnee as $listeAnnee){
+            $annee[]=$listeAnnee->{"annee"};
+        }
+        return $annee;
+    }
     public function importer(Request $req)
     {   
         $file = $req->file('file');
         $spreadsheet = IOFactory::load($file);//file : nom champ du fichier
 
         $annee=$req->annee;
-        //$annee=2029;
         $premiereUtilisation=false;
         $nbMateriel=DB::select("select count(idMateriel) from materiels;");
         if (($nbMateriel[0]->{"count(idMateriel)"})===0){$premiereUtilisation=true;}
         //$nb=$nbMateriel[0]->{"count(idMateriel)"};
 
-        $nbRecensementAnnee=DB::select(" select count(idRecensement) from recensements where annee=$annee");
-        //return $nbRecensementAnnee[0]->{'count(idRecensement)'};
-
-        if(($nbRecensementAnnee[0]->{'count(idRecensement)'})===0){
             // Assuming you have two sheets: Sheet1 and Sheet2
         $nomenclature3 = $spreadsheet->getSheetByName('3');
         $nomenclature5 = $spreadsheet->getSheetByName('5');
@@ -117,10 +119,6 @@ class RecensementController extends Controller
         importerDonnee($nomenclature5Tab,'5',$annee,$premiereUtilisation);
         importerDonnee($nomenclature10Tab,'10',$annee,$premiereUtilisation);
         return "importer";
-        }
-        else{
-            return "annee deja existante";
-        }
         
     }
     public function listeMaterielARecense($annee){   
