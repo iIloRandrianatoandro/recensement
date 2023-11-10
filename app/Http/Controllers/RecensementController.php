@@ -121,16 +121,45 @@ class RecensementController extends Controller
         return "importer";
         
     }
-    public function listeMaterielARecense($annee){   
+    public function listeMaterielARecense($annee){
+        //liste materiels a recenser   
         $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation,materiels.nomenclature,recensements.prixUnite from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
         // Liste des nomenclatures
         $nomenclatures = DB::table('materiels')
             ->select('nomenclature')
             ->groupBy('nomenclature')
             ->get();
+        //liste materiel par nomenclature
+        $recensementParNomenclature = [];
+        foreach ($nomenclatures as $nomenclature) {
+            $recensement = DB::table('recensements')
+            ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
+            ->where('materiels.nomenclature', $nomenclature->nomenclature)
+            ->where('recensements.annee', $annee)
+            ->where('recensements.recense', false)
+            ->select(
+                'recensements.idRecensement as idRecensement',
+                'materiels.designation as designation' ,
+                'materiels.especeUnite as especeUnite',
+                'materiels.nomenclature as nomenclature',
+                'recensements.prixUnite as prixUnite',
+                'recensements.existantApresEcriture as existantApresEcriture',
+                DB::raw('(recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) as constateesParRecensement'),
+                'recensements.excedentParArticle as excedentParArticle',
+                'recensements.deficitParArticle as deficitParArticle',
+                DB::raw('(recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent'),
+                DB::raw('(recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit'),
+                DB::raw('((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant'),
+                'recensements.observation as observation'
+            )
+            ->get();
+    
+            $recensementParNomenclature[$nomenclature->nomenclature] = $recensement;
+        }
         $a = [
             'nomenclatures' => $nomenclatures,
             'listeMaterielARecense' => $listeMaterielARecense,
+            'recensementParNomenclature' => $recensementParNomenclature,
         ];
         return $a;
         return $listeMaterielARecense;
@@ -277,7 +306,7 @@ class RecensementController extends Controller
         ->first();
         //liste recensement
         $listeRecensementsTab=DB::select("select recensements.idRecensement,materiels.nomenclature,materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel and recensements.annee=$annee and recense=true");
-        //deficit par nomenclature
+        //recensement par nomenclature
         $recensementParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {
             $recensement = DB::table('recensements')
