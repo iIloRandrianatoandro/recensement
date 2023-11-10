@@ -266,7 +266,7 @@ class RecensementController extends Controller
         ->where('recensements.recense', true)
         ->first();
         //liste recensement
-        $listeRecensementsTab=DB::select("select materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel and recensements.annee=$annee and recense=true");
+        $listeRecensementsTab=DB::select("select recensements.idRecensement,materiels.nomenclature,materiels.designation,materiels.especeUnite,recensements.prixUnite,recensements.existantApresEcriture,(recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) as constateesParRecensement, recensements.excedentParArticle, recensements.deficitParArticle, (recensements.excedentParArticle * recensements.prixUnite) as valeurExcedent, (recensements.deficitParArticle * recensements.prixUnite) as valeurDeficit, ((recensements.existantApresEcriture+recensements.excedentParArticle-recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant, recensements.observation from recensements, materiels where recensements.materiel_idMateriel=materiels.idMateriel and recensements.annee=$annee and recense=true");
         //deficit par nomenclature
         $recensementParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {
@@ -276,6 +276,7 @@ class RecensementController extends Controller
             ->where('recensements.annee', $annee)
             ->where('recensements.recense', true)
             ->select(
+                'recensements.idRecensement as idRecensement',
                 'materiels.designation as designation' ,
                 'materiels.especeUnite as especeUnite',
                 'recensements.prixUnite as prixUnite',
@@ -317,6 +318,7 @@ class RecensementController extends Controller
             'nbArticleAvecExcedent'=>$nbArticleAvecExcedent,
             'nbArticleAvecDeficit'=>$nbArticleAvecDeficit,
             'recensementParNomenclature' => $recensementParNomenclature,
+            'listeRecensementsTab' => $listeRecensementsTab,
         ];
         return $a;
     }
