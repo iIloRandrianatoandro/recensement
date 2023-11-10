@@ -177,7 +177,7 @@ class RecensementController extends Controller
     } 
     public function genererRecapitulatif(Request $req){
         $annee=$req->annee;
-        $annee=2023;
+        //$annee=2023;
         // Liste des nomenclatures
         $nomenclatures = DB::table('materiels')
             ->select('nomenclature')
@@ -199,10 +199,11 @@ class RecensementController extends Controller
         //valeur totale des excedents
         $valeurTotaleExcedent = DB::table('recensements')
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
-            ->select(DB::raw('SUM(recensements.excedentParArticle * recensements.prixUnite) as totalExcedent'))
+            ->select(DB::raw('COALESCE(SUM(recensements.excedentParArticle * recensements.prixUnite), 0) as totalExcedent'))
             ->where('recensements.annee', $annee)
             ->where('recensements.recense', true)
             ->first();
+
         //deficit par nomenclature
         $deficitParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {
@@ -215,33 +216,35 @@ class RecensementController extends Controller
     
             $deficitParNomenclature[$nomenclature->nomenclature] = $valeurDeficit;
         }
-        //valeur totale des deficits
+        // Valeur totale des déficits
         $valeurTotaleDeficit = DB::table('recensements')
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
-            ->select(DB::raw('SUM(recensements.deficitParArticle * recensements.prixUnite) as totalDeficit'))
+            ->select(DB::raw('COALESCE(SUM(recensements.deficitParArticle * recensements.prixUnite), 0) as totalDeficit'))
             ->where('recensements.annee', $annee)
             ->where('recensements.recense', true)
             ->first();
+
         // Existant par nomenclature
         $existantParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {
-            $valeurExistant = DB::table('recensements')
+        $valeurExistant = DB::table('recensements')
             ->join('materiels', 'recensements.materiel_idMateriel', '=', 'materiels.idMateriel')
-            ->select(DB::raw('SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as totalExistant'))
+            ->select(DB::raw('COALESCE(SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite), 0) as totalExistant'))
             ->where('materiels.nomenclature', $nomenclature->nomenclature)
             ->where('recensements.annee', $annee)
             ->where('recensements.recense', true)
             ->first();
 
-            $existantParNomenclature[$nomenclature->nomenclature] = $valeurExistant->totalExistant;
+        $existantParNomenclature[$nomenclature->nomenclature] = $valeurExistant->totalExistant;
         }
 
-        // Valeur totale des existants
+        // Valeur totale des existants avec coalesce
         $valeurTotaleExistant = DB::table('recensements')
-        ->select(DB::raw('SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite) as totalExistant'))
+        ->select(DB::raw('COALESCE(SUM((existantApresEcriture + excedentParArticle - deficitParArticle) * prixUnite), 0) as totalExistant'))
         ->where('recensements.annee', $annee)
         ->where('recensements.recense', true)
         ->first();
+
         // Nombre d'articles par nomenclature
         $nbArticleParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {

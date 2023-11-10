@@ -32,7 +32,7 @@ Route::controller(RecensementController::class)->group(function(){
     Route::get('suivreFluxRecensement/','suivreFluxRecensement'); 
     Route::get('rechercherRecensement/{designation}/{annee}','rechercherRecensement');
     Route::post('modifierRecensement/{idRecensement}','modifierRecensement'); 
-    Route::get('genererRecapitulatif','genererRecapitulatif'); 
+    Route::post('genererRecapitulatif','genererRecapitulatif'); 
     Route::get('consulterEvolution5Ans','consulterEvolution5Ans'); 
     Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel');
     Route::get('export/{annee}','export');  
