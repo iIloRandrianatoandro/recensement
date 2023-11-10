@@ -123,6 +123,16 @@ class RecensementController extends Controller
     }
     public function listeMaterielARecense($annee){   
         $listeMaterielARecense=DB::select("select recensements.idRecensement,recensements.existantApresEcriture,recensements.materiel_idMateriel,materiels.designation,materiels.nomenclature,recensements.prixUnite from recensements,materiels where recensements.materiel_idMateriel=materiels.idMateriel and annee='$annee' and recense=false");
+        // Liste des nomenclatures
+        $nomenclatures = DB::table('materiels')
+            ->select('nomenclature')
+            ->groupBy('nomenclature')
+            ->get();
+        $a = [
+            'nomenclatures' => $nomenclatures,
+            'listeMaterielARecense' => $listeMaterielARecense,
+        ];
+        return $a;
         return $listeMaterielARecense;
     }
     public function rechercherMaterielARecenser($designation,$annee){//utilisteur
