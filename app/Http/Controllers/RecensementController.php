@@ -223,7 +223,7 @@ class RecensementController extends Controller
             ->groupBy('nomenclature')
             ->get();
         //recap par nomenclature
-        $recapParNomenclature=DB::select(" select materiels.nomenclature,sum(recensements.excedentParArticle * recensements.prixUnite)as valeurExcedent,sum(recensements.deficitParArticle * recensements.prixUnite)as valeurDeficit,SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant,COUNT(recensements.idRecensement) as nbArticle  from materiels,recensements where materiels.idMateriel=recensements.materiel_idMateriel and recensements.annee=2023 and recensements.recense=true group by materiels.nomenclature;");
+        $recapParNomenclature=DB::select(" select materiels.nomenclature,sum(recensements.excedentParArticle * recensements.prixUnite)as valeurExcedent,sum(recensements.deficitParArticle * recensements.prixUnite)as valeurDeficit,SUM((recensements.existantApresEcriture + recensements.excedentParArticle - recensements.deficitParArticle) * recensements.prixUnite) as valeurExistant,COUNT(recensements.idRecensement) as nbArticle  from materiels,recensements where materiels.idMateriel=recensements.materiel_idMateriel and recensements.annee='$annee' and recensements.recense=true group by materiels.nomenclature;");
         //excedent par nomenclature
         $excedentParNomenclature = [];
         foreach ($nomenclatures as $nomenclature) {
