@@ -369,15 +369,15 @@ class RecensementController extends Controller
         $annee2=$annee5-3;
         $annee3=$annee5-2;
         $annee4=$annee5-1;
-        $annee1Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements where annee='$annee1'");
+        $annee1Valeur=Db::select("select COALESCE(sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite),0) as valeur from recensements where annee='$annee1'");
         $annee1Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee1'");
-        $annee2Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements where annee='$annee2'");
+        $annee2Valeur=Db::select("select COALESCE(sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite),0) as valeur from recensements where annee='$annee2'");
         $annee2Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee2'");
-        $annee3Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements where annee='$annee3'");
+        $annee3Valeur=Db::select("select COALESCE(sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite),0) as valeur from recensements where annee='$annee3'");
         $annee3Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee3'");
-        $annee4Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements where annee='$annee4'");
+        $annee4Valeur=Db::select("select COALESCE(sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite),0) as valeur from recensements where annee='$annee4'");
         $annee4Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee4'");
-        $annee5Valeur=Db::select("select sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite) from recensements where annee='$annee5'");
+        $annee5Valeur=Db::select("select COALESCE(sum((existantApresEcriture+excedentParArticle-deficitParArticle) * prixUnite),0) as valeur from recensements where annee='$annee5'");
         $annee5Quantite=DB::select("select count(idRecensement)from recensements where annee='$annee5'");
         return ['annee1Valeur'=>$annee1Valeur,'annee1Quantite'=>$annee1Quantite,'annee2Valeur'=>$annee2Valeur,'annee2Quantite'=>$annee2Quantite,'annee2Quantite'=>$annee2Quantite,'annee3Valeur'=>$annee3Valeur,'annee3Quantite'=>$annee3Quantite,'annee4Valeur'=>$annee4Valeur,'annee4Quantite'=>$annee4Quantite,'annee5Valeur'=>$annee5Valeur,'annee5Quantite'=>$annee5Quantite];
     }
