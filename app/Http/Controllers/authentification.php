@@ -37,22 +37,18 @@ class authentification extends Controller
     public function modifierUtilisateur(Request $request, $id)
     {
         $user = User::find($id);
-    
-        if (!$user) {
-            return "Utilisateur non trouvé";
-        }
-    
+        
         // Validez les données d'entrée pour la mise à jour (ajoutez des règles de validation selon vos besoins)
         $userData = $request->validate([
-            'nom' => 'required',
-            'mail' => 'required|email|unique:users,email,' . $id,
-            'mdp' => 'required',
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'password' => 'required',
         ]);
     
         // Mettez à jour les champs de l'utilisateur
-        $user->name = $userData['nom'];
-        $user->email = $userData['mail'];
-        $userData['password'] = Hash::make($userData['mdp']);
+        $user->name = $userData['name'];
+        $user->email = $userData['email'];
+        $userData['password'] = Hash::make($userData['password']);
     
         $user->save();
     
@@ -60,12 +56,7 @@ class authentification extends Controller
     }
     public function supprimerUtilisateur($id)
     {
-        $user = User::find($id);
-    
-        if (!$user) {
-            return "Utilisateur non trouvé";
-        }
-    
+        $user = User::find($id);    
         $user->delete();
     
         return "Utilisateur supprimé avec succès";
