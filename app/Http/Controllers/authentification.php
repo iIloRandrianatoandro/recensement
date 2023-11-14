@@ -28,7 +28,8 @@ class authentification extends Controller
             return ['id'=>Auth::user()->id,'isAdmin'=>true];
         }
        };
-       return response(['message' => 'Échec de l\'authentification'], 401);
+       //return response(['message' => 'Échec de l\'authentification'], 401);
+       //return "nonExistant";
     }
     public function seDeconnecter(){ //logout
         Auth::logout();
