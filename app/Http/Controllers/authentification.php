@@ -64,7 +64,7 @@ class authentification extends Controller
     }
     public function listerUtilisateur()
     {
-        $users = User::all();
+        $users = User::where('isAdmin', false)->get();
         return $users;
     }
     public function voirUtilisateur($id)
