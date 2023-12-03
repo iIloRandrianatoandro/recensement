@@ -15,7 +15,7 @@ class authentification extends Controller
         $User= new User;
         $User->name=$req->name;
         $User->email=$req->email;
-        $User->password=Hash::make($req->password);
+        $User->password=bcrypt($req->password);
         $User->save();
         return response(['message' => 'Utilisateur créé avec succès', 'user' => $User]);
     }
@@ -47,13 +47,12 @@ class authentification extends Controller
         ]);
     
         // Mettez à jour les champs de l'utilisateur
-        $user->name = $userData['name'];
-        $user->email = $userData['email'];
-        $userData['password'] = Hash::make($userData['password']);
-    
-        $user->save();
-    
-        return response(['message' => 'Utilisateur modifié avec succès', 'user' => $user]);
+        $user->update([
+            'name' => $userData['name'],
+            'email' => $userData['email'],
+            'password' => bcrypt($userData['password']),
+        ])
+        ;
     }
     public function supprimerUtilisateur($id)
     {
