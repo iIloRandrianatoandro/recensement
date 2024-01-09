@@ -18,6 +18,9 @@ use Carbon\Carbon;
 use NumberFormatter;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
+
 
 
 class RecensementController extends Controller
@@ -491,6 +494,9 @@ public function genererExcel($annee)
 
 
     //contenu
+    
+    // Définir la largeur de la colonne A
+    $feuille1->getColumnDimension('A')->setWidth(75);
     // Insérer les données dans la feuille de calcul
     $rowIndex = 5;
     // Définir la hauteur totale de la page en mode paysage
@@ -514,12 +520,19 @@ public function genererExcel($annee)
              // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
             $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
             }
-
-            $feuille1->getRowDimension($rowIndex)->getCalculatedRowHeight();
             
             $columnIndex++;
         }
         
+        $cellContent = $feuille1->getCellByColumnAndRow(1, 1)->getValue();
+
+        // Split the text into lines based on cell width and font size
+        $lines = mb_str_split($cellContent, 100); // Assuming a cell width of 100 characters
+        
+        // Count the number of lines
+        $numberOfLines = count($lines);
+        
+return $numberOfLines;
         $rowIndex++;
     }
     /*$height = $feuille1->getCellByColumnAndRow(1, 7)->getStyle()->getFont()->getSize();
@@ -539,8 +552,6 @@ return $height;*/
     ];
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
-    // Définir la largeur de la colonne A
-    $feuille1->getColumnDimension('A')->setWidth(75);
     }
     
    /* $totalRows = $feuille1->getHighestRow();
