@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Maatwebsite\Excel\Facades\Excel;
-//use Maatwebsite\Excel\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Imports\RecensementsImport;
 use App\Exports\RecensementsExport;
@@ -17,6 +17,8 @@ use DB;
 use Carbon\Carbon;
 use NumberFormatter;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+
 
 class RecensementController extends Controller
 {
@@ -466,7 +468,7 @@ public function genererExcel($annee)
     $feuille1->setCellValue("K". 3,"par numéro de la nomenclature sommaire");
     $feuille1->setCellValue("A". 4,"NOMENCLATURE ".$nomenclature);
 
-    //fusion cellules
+    //fusion cellules titres
     $feuille1->mergeCells('A1:A3');
     $feuille1->mergeCells('B1:B3');
     $feuille1->mergeCells('C1:C3');
@@ -481,9 +483,22 @@ public function genererExcel($annee)
     $feuille1->mergeCells('M1:M3');
     $feuille1->mergeCells('D1:E1');
     
+    //figer titres
+    $feuille1->freezePane('A1');
+    $feuille1->freezePane('A2');
+    $feuille1->freezePane('A3');
+    $feuille1->freezePane('A4');
+
+
     //contenu
     // Insérer les données dans la feuille de calcul
     $rowIndex = 5;
+    // Définir la hauteur totale de la page en mode paysage
+    $largeurTotale = 11.7 * 25.4 / 2; // En pouces
+    // Initialiser les variables
+    $nbRecensementEcrit = 0;
+    $hauteurActuelle = 0;
+
     foreach ($listeRecensementsTab as $recensement) {
         $columnIndex = 1;
         foreach ($recensement as $value) {
@@ -499,12 +514,16 @@ public function genererExcel($annee)
              // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
             $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
             }
+
+            $feuille1->getRowDimension($rowIndex)->getCalculatedRowHeight();
+            
             $columnIndex++;
         }
+        
         $rowIndex++;
     }
-
-
+    /*$height = $feuille1->getCellByColumnAndRow(1, 7)->getStyle()->getFont()->getSize();
+return $height;*/
 
     // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
     $lastColumn = $feuille1->getHighestDataColumn();
@@ -521,9 +540,16 @@ public function genererExcel($annee)
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
     // Définir la largeur de la colonne A
-    $feuille1->getColumnDimension('A')->setWidth(80);
+    $feuille1->getColumnDimension('A')->setWidth(75);
     }
-   
+    
+   /* $totalRows = $feuille1->getHighestRow();
+
+for ($row = 1; $row <= $totalRows; $row++) {
+    $height = $feuille1->getRowHeight($row);
+    return $height;
+}*/
+    //$feuille1->setPaperSize("A4");
 
     //derniere page
     $feuille2=$excel->createSheet();
@@ -713,7 +739,7 @@ public function genererExcel($annee)
     $feuille2->setCellValue('A13', $text2);
     $text3 = "$totalExistantTexte (Ar $totalExistant) ";
     $feuille2->setCellValue('A14', $text3);
-    $text4 = "Le Comptable ............................................................ Antananarivo, le 31 décembre 2020";
+    $text4 = "Le Comptable ............................................................ Antananarivo, le 31 décembre $annee";
     $feuille2->setCellValue('A16', $text4);
     $text5 = "Le (2) Dépositaire Comptable";
     $feuille2->setCellValue('B17', $text5);
@@ -721,11 +747,11 @@ public function genererExcel($annee)
     $feuille2->setCellValue('A22', $text6);
     $text7 = "Commissions :";
     $feuille2->setCellValue('C23', $text7);
-    $text8 = "Antananarivo, le le 31 décembre 2020";
+    $text8 = "Antananarivo, le le 31 décembre $annee";
     $feuille2->setCellValue('C28', $text8);
     $text9 = "OBSERVATIONS DU COMPTABLE";
     $feuille2->setCellValue('B30', $text9);
-    $text10 = "Antananarivo, le  31 décembre 2020";
+    $text10 = "Antananarivo, le  31 décembre $annee";
     $feuille2->setCellValue('C34', $text10);
     
     $feuille2->setCellValue('A38', 'Avis du délégué du chef de service');
@@ -773,6 +799,8 @@ public function genererExcel($annee)
     $feuille2->getStyle('B28')->applyFromArray($style);
     $feuille2->getStyle('C33')->applyFromArray($style);
    
+    
+    //$feuille2->setPaperSize("A4");
 
     // Générez le fichier Excel
     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($excel);
@@ -780,6 +808,13 @@ public function genererExcel($annee)
     $writer->save($temp_file);
 
     return response()->download($temp_file, 'recensement1.xlsx')->deleteFileAfterSend(true);
+}
+public function genererPdf(){
+    $pdf = Pdf::loadView('pdf');
+
+    $pdf->setPaper('A4', 'paysage');
+ 
+    return $pdf->download();
 }
 }
 

@@ -35,6 +35,7 @@ Route::controller(RecensementController::class)->group(function(){
     Route::get('consulterEvolution5Ans','consulterEvolution5Ans'); 
     Route::get('consulterEvolutionMateriel/{materielID}','consulterEvolutionMateriel');
     Route::get('export/{annee}','genererExcel');  
+    Route::get('genererPdf/','genererPdf');  
 });
 Route::controller(MaterielController::class)->group(function(){
     Route::get('listeMateriel','listeMateriel'); 
