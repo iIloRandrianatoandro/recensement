@@ -500,10 +500,15 @@ public function genererExcel($annee)
     // Insérer les données dans la feuille de calcul
     $rowIndex = 5;
     // Définir la hauteur totale de la page en mode paysage
-    $largeurTotale = 11.7 * 25.4 / 2; // En pouces
+    $nbLignes1page = 28;
     // Initialiser les variables
-    $nbRecensementEcrit = 0;
-    $hauteurActuelle = 0;
+    $nbRecensementEcritSurPageActuelle = 0;
+    $nbLignesEcriteSurPageActuelle = 1;
+    $nbArticleRecense = 0;
+    //index de la ligne au debut de la page
+    $premiereLigne=5;
+    //totalExistants
+    $totalExistantEcrit=0;
 
     foreach ($listeRecensementsTab as $recensement) {
         $columnIndex = 1;
@@ -523,21 +528,59 @@ public function genererExcel($annee)
             
             $columnIndex++;
         }
-        
-        $cellContent = $feuille1->getCellByColumnAndRow(1, 1)->getValue();
+        // prendre le contenu de la cellule(designation)
+        $cellContent = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getValue();
+        // diviser la designation par la largeur de la cellule pour avoir le nombre de lignes occupées par la designation
+        $lines = mb_str_split($cellContent, 75); 
+        $nbLigneDesignation = count($lines);
+        $nbRecensementEcritSurPageActuelle+=1;
+        $nbLignesEcriteSurPageActuelle+=$nbLigneDesignation;
+        $nbArticleRecense+=1;
 
-        // Split the text into lines based on cell width and font size
-        $lines = mb_str_split($cellContent, 100); // Assuming a cell width of 100 characters
-        
-        // Count the number of lines
-        $numberOfLines = count($lines);
-        
-return $numberOfLines;
         $rowIndex++;
-    }
-    /*$height = $feuille1->getCellByColumnAndRow(1, 7)->getStyle()->getFont()->getSize();
-return $height;*/
 
+        if($nbLignesEcriteSurPageActuelle>$nbLignes1page){
+            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "A reporter"); 
+            $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
+            $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
+            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, "Valeur totale déficit"); 
+            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, "Valeur totale excedent"); 
+            //$feuille1->setCellValueByColumnAndRow(12, $rowIndex, "Valeur totale existant"); 
+
+            // Initialiser la somme
+$somme = 0;
+$finLigne=$rowIndex;
+// Parcourir les lignes jusqu'à $rowIndex-1
+for ($i = $premiereLigne; $i < $finLigne; $i++) {
+
+    // Obtenir la valeur de la cellule L$i
+    $valeur = $feuille1->getCellByColumnAndRow(12, $i)->getValue();
+
+    // Ajouter la valeur à la somme
+    $somme += $valeur;
+}
+$totalExistantEcrit+=$somme;
+// Mettre à jour la valeur de la cellule
+$feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit);
+            
+            // Mettre à jour la valeur de la cellule
+            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit) ;
+
+            $rowIndex++;
+            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "Report"); 
+            $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
+            $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
+            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, "Valeur totale déficit"); 
+            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, "Valeur totale excedent");
+            
+            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, "Valeur totale existant"); 
+
+            $nbLignesEcriteSurPageActuelle=0;
+            $rowIndex++;
+            $premiereLigne=$rowIndex;
+        }
+    }
+    
     // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
     $lastColumn = $feuille1->getHighestDataColumn();
     $lastRow = $feuille1->getHighestDataRow();
@@ -554,13 +597,6 @@ return $height;*/
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
     }
     
-   /* $totalRows = $feuille1->getHighestRow();
-
-for ($row = 1; $row <= $totalRows; $row++) {
-    $height = $feuille1->getRowHeight($row);
-    return $height;
-}*/
-    //$feuille1->setPaperSize("A4");
 
     //derniere page
     $feuille2=$excel->createSheet();
