@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 
 
@@ -449,6 +450,7 @@ public function genererExcel($annee)
     $feuille1 = $excel->createSheet();  // Obtenez la feuille active
     $feuille1->setTitle('rec'.$nomenclature); // Définissez le titre de la feuille
 
+
     //titres
     $feuille1->setCellValue("A". 1,"Désignation des matières, denrées et objets");
     $feuille1->setCellValue("B". 1,"Espèce des unités");
@@ -491,16 +493,17 @@ public function genererExcel($annee)
     $feuille1->freezePane('A2');
     $feuille1->freezePane('A3');
     $feuille1->freezePane('A4');
+    // Repeat headers on each printed page
+    $feuille1->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 3);
 
 
-    //contenu
-    
+    //contenu 
     // Définir la largeur de la colonne A
     $feuille1->getColumnDimension('A')->setWidth(75);
     // Insérer les données dans la feuille de calcul
     $rowIndex = 5;
     // Définir la hauteur totale de la page en mode paysage
-    $nbLignes1page = 28;
+    $nbLignes1page = 45;
     // Initialiser les variables
     $nbRecensementEcritSurPageActuelle = 0;
     $nbLignesEcriteSurPageActuelle = 1;
@@ -509,25 +512,39 @@ public function genererExcel($annee)
     $premiereLigne=5;
     //totalExistants
     $totalExistantEcrit=0;
-
-    foreach ($listeRecensementsTab as $recensement) {
+    $totalExedentEcrit=0;
+    $totalDeficitEcrit=0;
+    $nonFinTableau=true;
+    // Obtenir le pointeur sur le dernier élément
+    $dernierElement = $listeRecensementsTab->last();
+        foreach ($listeRecensementsTab as $recensement) {
+        // Vérifier si on est sur le dernier élément
+        if ($recensement === $dernierElement) {
+            $nonFinTableau=false;
+        }
         $columnIndex = 1;
         foreach ($recensement as $value) {
             if(($columnIndex==9)||($columnIndex==11)){
                 $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, "");
-                $feuille1->setCellValueByColumnAndRow($columnIndex+1, $rowIndex, $value);
+                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);
                 $columnIndex++;
             }
             else{
-                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);            
+                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);
+
             }
-            if(($columnIndex==1)||($columnIndex==12)||($columnIndex==13)){
-             // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
-            $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
+            $cellContent = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getFormattedValue();
+                $designationTab = mb_str_split($cellContent, 1);
+                $nbCaractere= count($designationTab);
+                
+            if(($columnIndex==1 & $nbCaractere>75)){
+                // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
+                $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
             }
             
             $columnIndex++;
         }
+        
         // prendre le contenu de la cellule(designation)
         $cellContent = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getValue();
         // diviser la designation par la largeur de la cellule pour avoir le nombre de lignes occupées par la designation
@@ -539,48 +556,116 @@ public function genererExcel($annee)
 
         $rowIndex++;
 
-        if($nbLignesEcriteSurPageActuelle>$nbLignes1page){
-            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "A reporter"); 
+        if($nbLignesEcriteSurPageActuelle>$nbLignes1page & $nonFinTableau){
+            $cellStyle = $feuille1->getStyleByColumnAndRow(3, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "A reporter");
+            $cellStyle = $feuille1->getStyleByColumnAndRow(4, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
             $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
             $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
-            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, "Valeur totale déficit"); 
-            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, "Valeur totale excedent"); 
-            //$feuille1->setCellValueByColumnAndRow(12, $rowIndex, "Valeur totale existant"); 
-
-            // Initialiser la somme
-$somme = 0;
-$finLigne=$rowIndex;
-// Parcourir les lignes jusqu'à $rowIndex-1
-for ($i = $premiereLigne; $i < $finLigne; $i++) {
-
-    // Obtenir la valeur de la cellule L$i
-    $valeur = $feuille1->getCellByColumnAndRow(12, $i)->getValue();
-
-    // Ajouter la valeur à la somme
-    $somme += $valeur;
-}
-$totalExistantEcrit+=$somme;
-// Mettre à jour la valeur de la cellule
-$feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit);
             
+            // Initialiser la sommeExistant
+            $sommeExistant = 0;
+            // Initialiser la sommeExedent
+            $sommeExedent = 0;
+            // Initialiser la sommeDeficit
+            $sommeDeficit = 0;
+            $finLigne=$rowIndex;
+            // Parcourir les lignes jusqu'à finLigne
+            for ($i = $premiereLigne; $i < $finLigne; $i++) {
+                // Obtenir la valeur de la cellule existant
+                $valeurExistantActuel = $feuille1->getCellByColumnAndRow(12, $i)->getValue();
+                // Obtenir la valeur de la cellule exedent
+                $valeurExedentActuel = $feuille1->getCellByColumnAndRow(8, $i)->getValue();
+                // Obtenir la valeur de la cellule deficit
+                $valeurDeficitActuel = $feuille1->getCellByColumnAndRow(10, $i)->getValue();
+
+                // Ajouter la valeur à la somme existant
+                $sommeExistant += $valeurExistantActuel;
+                // Ajouter la valeur à la somme exedent
+                $sommeExedent += $valeurExedentActuel;
+                // Ajouter la valeur à la somme deficit
+                $sommeDeficit += $valeurDeficitActuel;
+            }
+            $totalExistantEcrit+=$sommeExistant;
+            $totalExedentEcrit+=$sommeExedent;
+            $totalDeficitEcrit+=$sommeDeficit;
+
+
             // Mettre à jour la valeur de la cellule
-            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit) ;
+            $cellStyle = $feuille1->getStyleByColumnAndRow(12, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(9, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, $totalExedentEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(11, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, $totalDeficitEcrit);
 
             $rowIndex++;
-            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "Report"); 
-            $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
-            $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
-            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, "Valeur totale déficit"); 
-            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, "Valeur totale excedent");
-            
-            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, "Valeur totale existant"); 
+            $cellStyle = $feuille1->getStyleByColumnAndRow(3, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(3, $rowIndex, "Report");
 
-            $nbLignesEcriteSurPageActuelle=0;
+            $cellStyle = $feuille1->getStyleByColumnAndRow(4, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
+
+            $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
+            $cellStyle = $feuille1->getStyleByColumnAndRow(12, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(9, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, $totalExedentEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(11, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, $totalDeficitEcrit);
+
+            $nbLignesEcriteSurPageActuelle=2;
             $rowIndex++;
             $premiereLigne=$rowIndex;
         }
     }
-    
+
+/*$sampleText = "- Armoire basse en matière mélaminée à 2 portes battantes de dim (150x80x40) cm"; // Remplacez cela par le texte réel que vous prévoyez d'utiliser
+$length = strlen($sampleText);
+return $length;
+
+    $cellContent = $feuille1->getCellByColumnAndRow(1, 8)->getFormattedValue();
+    $designationTab = mb_str_split($cellContent, 1);
+    $nbCaractere= count($designationTab);
+    return $cellContent;*/
+
+    //fin tableau
+    $cellStyle = $feuille1->getStyleByColumnAndRow(1, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(1, $rowIndex, "TOTAL NOMENCLATURE".$nomenclature);
+            $feuille1->mergeCells('A' . $rowIndex . ':C' . $rowIndex);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(4, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
+            $feuille1->mergeCells('D' . $rowIndex . ':G' . $rowIndex);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(12, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(12, $rowIndex, $totalExistantEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(9, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(9, $rowIndex, $totalExedentEcrit);
+
+            $cellStyle = $feuille1->getStyleByColumnAndRow(11, $rowIndex);
+            $cellStyle->getFont()->setBold(true);
+            $feuille1->setCellValueByColumnAndRow(11, $rowIndex, $totalDeficitEcrit);
+
     // Obtenez la lettre de la dernière colonne et le numéro de la dernière ligne
     $lastColumn = $feuille1->getHighestDataColumn();
     $lastRow = $feuille1->getHighestDataRow();
