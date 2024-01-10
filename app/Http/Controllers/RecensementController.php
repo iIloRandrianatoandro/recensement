@@ -21,6 +21,8 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use PhpOffice\PhpSpreadsheet\Worksheet\WorksheetDimension;
+
 
 
 
@@ -534,10 +536,28 @@ public function genererExcel($annee)
 
             }
             $cellContent = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getFormattedValue();
-                $designationTab = mb_str_split($cellContent, 1);
-                $nbCaractere= count($designationTab);
-                
-            if(($columnIndex==1 & $nbCaractere>75)){
+ // Obtenez les informations sur la police
+ $cellStyle = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getStyle();
+ $font = $cellStyle->getFont();
+
+// Obtenez la largeur du glyphe
+$glyphWidth = $font->getFontMetrics()->getCharacterWidth("a");
+// Convertissez la largeur du glyphe en points
+$pointWidth = $glyphWidth / $font->getSize() * 72;
+
+return $pointWidth;
+
+            $largeurTotale = 0;
+            for ($i = 0; $i < mb_strlen($cellContent); $i++) {
+                $largeurCaractere = $worksheetDimensions->getCharacterWidth($cellContent[$i]);
+                //$largeurCaractere = $feuille1->getDimensions()->getCharacterWidth($cellContent[$i]);
+                $largeurTotale += $largeurCaractere;
+            }
+            
+
+return $largeurTotale;                
+
+            if(($columnIndex==1 & $largeurTotale>75)){
                 // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
                 $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
             }
@@ -677,9 +697,16 @@ return $length;
                 'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
             ],
         ],
+        
+        'alignment' => [
+            'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+        ],
     ];
 
     $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray($styleArray);
+   // $feuille1->getStyle('A1:' . $lastColumn . $lastRow)->getFont()->setSize(10); // Définir la taille de la police à 10 points
+   
     }
     
 
@@ -829,6 +856,19 @@ return $length;
         $feuille2->mergeCells('I' . $a . ':' . 'K' . $a);
         $feuille2->mergeCells('L' . $a . ':' . 'M' . $a);
     }
+
+    // Appliquez des bordures aux cellules de A1 à la dernière cellule avec des données
+    $styleArray = [
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+            ],
+        ],
+        
+    ];
+
+    $feuille2->getStyle('A1:M5')->applyFromArray($styleArray);
+
     $locale = 'fr_FR';
     $fmt = new NumberFormatter($locale, NumberFormatter::SPELLOUT);
     $totalExistantTexteMaj=strtoupper($fmt->format($totalExistant));
@@ -886,19 +926,22 @@ return $length;
     $text10 = "Antananarivo, le  31 décembre $annee";
     $feuille2->setCellValue('C34', $text10);
     
-    $feuille2->setCellValue('A38', 'Avis du délégué du chef de service');
-    $feuille2->setCellValue('A39', "(s'il y a lieu)");
+    $feuille2->setCellValue('A38', "Avis du délégué du chef de service (s'il y a lieu)");
     $feuille2->setCellValue('F38', 'Décision ou conclusion du chef de service');
     $feuille2->setCellValue('A45', 'Antananarivo, le');
     $feuille2->setCellValue('F45', 'Antananarivo, le');
     $feuille2->setCellValue('C47', 'DECISION DU');
     $feuille2->setCellValue('H49', 'Antananarivo, le');
     //$feuille2->getStyle('A38:M45')->applyFromArray($styleArray);
-    $feuille2->mergeCells('A38:E38');
-    $feuille2->mergeCells('A39:E39');
-    $feuille2->mergeCells('F38:M39');
+    $feuille2->mergeCells('A38:E39');
+    $feuille2->mergeCells('F38:I39');
     $feuille2->mergeCells('A45:E45');
-    $feuille2->mergeCells('F45:M45');
+    $feuille2->mergeCells('F45:I45');
+    $feuille2->mergeCells('A40:E44');
+    $feuille2->mergeCells('F40:I44');
+
+    
+    $feuille2->getStyle('A38:I45')->applyFromArray($styleArray);
 
     //$feuille2->getStyle('A38')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
@@ -913,11 +956,6 @@ return $length;
             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
             'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
         ],
-        /*'borders' => [
-            'outline' => [
-                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-            ],
-        ],*/
     ];
 
     $feuille2->getStyle('A12')->applyFromArray($style);
@@ -940,13 +978,6 @@ return $length;
     $writer->save($temp_file);
 
     return response()->download($temp_file, 'recensement1.xlsx')->deleteFileAfterSend(true);
-}
-public function genererPdf(){
-    $pdf = Pdf::loadView('pdf');
-
-    $pdf->setPaper('A4', 'paysage');
- 
-    return $pdf->download();
 }
 }
 
