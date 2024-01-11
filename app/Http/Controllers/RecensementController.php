@@ -536,28 +536,10 @@ public function genererExcel($annee)
 
             }
             $cellContent = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getFormattedValue();
- // Obtenez les informations sur la police
- $cellStyle = $feuille1->getCellByColumnAndRow(1, $rowIndex)->getStyle();
- $font = $cellStyle->getFont();
-
-// Obtenez la largeur du glyphe
-$glyphWidth = $font->getFontMetrics()->getCharacterWidth("a");
-// Convertissez la largeur du glyphe en points
-$pointWidth = $glyphWidth / $font->getSize() * 72;
-
-return $pointWidth;
-
-            $largeurTotale = 0;
-            for ($i = 0; $i < mb_strlen($cellContent); $i++) {
-                $largeurCaractere = $worksheetDimensions->getCharacterWidth($cellContent[$i]);
-                //$largeurCaractere = $feuille1->getDimensions()->getCharacterWidth($cellContent[$i]);
-                $largeurTotale += $largeurCaractere;
-            }
+            $designationTab = mb_str_split($cellContent, 1);
+            $nbCaractere= count($designationTab);
             
-
-return $largeurTotale;                
-
-            if(($columnIndex==1 & $largeurTotale>75)){
+        if(($columnIndex==1 & $nbCaractere>75)){
                 // Appliquer le style à la cellule pour activer le "text wrapping" (retour à la ligne automatique)
                 $feuille1->getCellByColumnAndRow($columnIndex, $rowIndex)->getStyle()->getAlignment()->setWrapText(true);
             }
