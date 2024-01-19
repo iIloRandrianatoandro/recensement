@@ -528,8 +528,8 @@ public function genererExcel($annee)
         foreach ($recensement as $value) {
             if(($columnIndex==9)||($columnIndex==11)){
                 $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, "");
-                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);
                 $columnIndex++;
+                $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);
             }
             else{
                 $feuille1->setCellValueByColumnAndRow($columnIndex, $rowIndex, $value);
