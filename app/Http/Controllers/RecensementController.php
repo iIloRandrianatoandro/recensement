@@ -558,6 +558,35 @@ public function genererExcel($annee)
 
         $rowIndex++;
 
+         // Initialiser la sommeExistant
+         $sommeExistant = 0;
+         // Initialiser la sommeExedent
+         $sommeExedent = 0;
+         // Initialiser la sommeDeficit
+         $sommeDeficit = 0;
+         $finLigne=$rowIndex;
+        if($nbLignesEcriteSurPageActuelle<$nbLignes1page & !$nonFinTableau){
+            // Parcourir les lignes jusqu'à finLigne
+            for ($i = $premiereLigne; $i < $finLigne; $i++) {
+                // Obtenir la valeur de la cellule existant
+                $valeurExistantActuel = $feuille1->getCellByColumnAndRow(12, $i)->getValue();
+                // Obtenir la valeur de la cellule exedent
+                $valeurExedentActuel = $feuille1->getCellByColumnAndRow(8, $i)->getValue();
+                // Obtenir la valeur de la cellule deficit
+                $valeurDeficitActuel = $feuille1->getCellByColumnAndRow(10, $i)->getValue();
+
+                // Ajouter la valeur à la somme existant
+                $sommeExistant += $valeurExistantActuel;
+                // Ajouter la valeur à la somme exedent
+                $sommeExedent += $valeurExedentActuel;
+                // Ajouter la valeur à la somme deficit
+                $sommeDeficit += $valeurDeficitActuel;
+            }
+            $totalExistantEcrit+=$sommeExistant;
+            $totalExedentEcrit+=$sommeExedent;
+            $totalDeficitEcrit+=$sommeDeficit;
+
+        }
         if($nbLignesEcriteSurPageActuelle>$nbLignes1page & $nonFinTableau){
             $cellStyle = $feuille1->getStyleByColumnAndRow(3, $rowIndex);
             $cellStyle->getFont()->setBold(true);
@@ -567,13 +596,7 @@ public function genererExcel($annee)
             $feuille1->setCellValueByColumnAndRow(4, $rowIndex, $nbArticleRecense . " Articles");
             $feuille1->mergeCells('D' . $rowIndex . ':H' . $rowIndex);
             
-            // Initialiser la sommeExistant
-            $sommeExistant = 0;
-            // Initialiser la sommeExedent
-            $sommeExedent = 0;
-            // Initialiser la sommeDeficit
-            $sommeDeficit = 0;
-            $finLigne=$rowIndex;
+           
             // Parcourir les lignes jusqu'à finLigne
             for ($i = $premiereLigne; $i < $finLigne; $i++) {
                 // Obtenir la valeur de la cellule existant
@@ -636,14 +659,6 @@ public function genererExcel($annee)
         }
     }
 
-/*$sampleText = "- Armoire basse en matière mélaminée à 2 portes battantes de dim (150x80x40) cm"; // Remplacez cela par le texte réel que vous prévoyez d'utiliser
-$length = strlen($sampleText);
-return $length;
-
-    $cellContent = $feuille1->getCellByColumnAndRow(1, 8)->getFormattedValue();
-    $designationTab = mb_str_split($cellContent, 1);
-    $nbCaractere= count($designationTab);
-    return $cellContent;*/
 
     //fin tableau
     $cellStyle = $feuille1->getStyleByColumnAndRow(1, $rowIndex);
